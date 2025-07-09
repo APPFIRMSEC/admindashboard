@@ -10,7 +10,6 @@ import {
   FileText,
   Video,
   Download,
-  ExternalLink
 } from "lucide-react";
 
 export function HelpSupport() {

@@ -9,8 +9,6 @@ import {
   IconPhoto,
   IconSettings,
   IconUsers,
-  IconHelp,
-  IconSearch,
   IconInnerShadowTop,
 } from "@tabler/icons-react"
 

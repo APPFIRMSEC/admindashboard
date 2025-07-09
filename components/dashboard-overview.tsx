@@ -9,10 +9,8 @@ import {
   Image, 
   Users, 
   TrendingUp, 
-  Calendar,
   Plus,
-  Edit,
-  Trash2
+  Edit
 } from "lucide-react";
 import Link from "next/link";
 
@@ -92,7 +90,7 @@ export function DashboardOverview() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Welcome back, Admin!</h1>
         <p className="text-muted-foreground">
-          Here's what's happening with your content today.
+          Here&apos;s what&apos;s happening with your content today.
         </p>
       </div>
 

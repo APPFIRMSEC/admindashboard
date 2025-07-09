@@ -17,8 +17,6 @@ import {
   Save, 
   Globe,
   Mail,
-  Phone,
-  MapPin,
   Facebook,
   Twitter,
   Instagram,

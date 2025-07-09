@@ -25,7 +25,6 @@ import {
   Plus, 
   Search, 
   Edit, 
-  Trash2, 
   Mail,
   Calendar,
   Shield,

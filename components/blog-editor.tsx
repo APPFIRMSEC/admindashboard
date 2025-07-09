@@ -17,8 +17,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { 
   Save, 
-  Eye, 
-  Calendar,
   Tag,
   Image as ImageIcon,
   X

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,63 +12,73 @@ import {
   Mic, 
   Image, 
   User,
-  Calendar,
   ExternalLink
 } from "lucide-react";
 import Link from "next/link";
+
+// Move mockResults outside the component
+const mockResults = [
+  {
+    id: 1,
+    type: "blog",
+    title: "Getting Started with Next.js 15",
+    excerpt: "Learn how to build modern web applications with Next.js 15...",
+    url: "/blogs/1",
+    author: "John Doe",
+    date: "2024-01-15",
+    icon: FileText
+  },
+  {
+    id: 2,
+    type: "podcast",
+    title: "Episode 23: Web Development Trends",
+    excerpt: "Exploring the latest trends in web development and what's coming next.",
+    url: "/podcasts/1",
+    author: "Jane Smith",
+    date: "2024-01-15",
+    icon: Mic
+  },
+  {
+    id: 3,
+    type: "media",
+    title: "hero-image.jpg",
+    excerpt: "Hero section background image",
+    url: "/media/1",
+    author: "Admin",
+    date: "2024-01-15",
+    icon: Image
+  },
+  {
+    id: 4,
+    type: "user",
+    title: "John Doe",
+    excerpt: "Admin user with full permissions",
+    url: "/users/1",
+    author: "System",
+    date: "2024-01-01",
+    icon: User
+  }
+];
 
 export function SearchResults() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchTerm, setSearchTerm] = useState(query);
-  const [results, setResults] = useState<any[]>([]);
+  type ResultType = {
+    id: number;
+    type: string;
+    title: string;
+    excerpt: string;
+    url: string;
+    author: string;
+    date: string;
+    icon: React.ElementType;
+  };
+  const [results, setResults] = useState<ResultType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Mock search results - in a real app, this would come from your API
-  const mockResults = [
-    {
-      id: 1,
-      type: "blog",
-      title: "Getting Started with Next.js 15",
-      excerpt: "Learn how to build modern web applications with Next.js 15...",
-      url: "/blogs/1",
-      author: "John Doe",
-      date: "2024-01-15",
-      icon: FileText
-    },
-    {
-      id: 2,
-      type: "podcast",
-      title: "Episode 23: Web Development Trends",
-      excerpt: "Exploring the latest trends in web development and what's coming next.",
-      url: "/podcasts/1",
-      author: "Jane Smith",
-      date: "2024-01-15",
-      icon: Mic
-    },
-    {
-      id: 3,
-      type: "media",
-      title: "hero-image.jpg",
-      excerpt: "Hero section background image",
-      url: "/media/1",
-      author: "Admin",
-      date: "2024-01-15",
-      icon: Image
-    },
-    {
-      id: 4,
-      type: "user",
-      title: "John Doe",
-      excerpt: "Admin user with full permissions",
-      url: "/users/1",
-      author: "System",
-      date: "2024-01-01",
-      icon: User
-    }
-  ];
-
-  const performSearch = async (term: string) => {
+  // Inside SearchResults, use useCallback with []
+  const performSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
       setResults([]);
       return;
@@ -88,13 +98,13 @@ export function SearchResults() {
     
     setResults(filtered);
     setIsLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (query) {
       performSearch(query);
     }
-  }, [query]);
+  }, [query, performSearch]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +163,7 @@ export function SearchResults() {
               Search Results ({results.length})
               {query && (
                 <span className="text-muted-foreground font-normal">
-                  {" "}for "{query}"
+                  {" "}for &quot;{query}&quot;
                 </span>
               )}
             </CardTitle>

@@ -16,6 +16,7 @@ import {
   Calendar,
   FileText
 } from "lucide-react";
+import Image from "next/image";
 
 export function MediaLibrary() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -180,9 +181,11 @@ export function MediaLibrary() {
                     {/* File Preview */}
                     <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
                       {file.type === "image" ? (
-                        <img 
-                          src={file.url} 
+                        <Image
+                          src={file.url}
                           alt={file.alt}
+                          width={400}
+                          height={400}
                           className="w-full h-full object-cover rounded-lg"
                         />
                       ) : (
