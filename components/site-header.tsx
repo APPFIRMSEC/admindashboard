@@ -1,18 +1,14 @@
 "use client";
 
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
-import { LogOut } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 export function SiteHeader() {
-  const router = useRouter();
-
   const handleLogout = () => {
-    // Clear authentication cookie
-    document.cookie = "isAuthenticated=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    router.push("/login");
+    signOut({ callbackUrl: "/login" });
   };
 
   return (
@@ -35,9 +31,9 @@ export function SiteHeader() {
               GitHub
             </a>
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleLogout}
             className="flex items-center gap-2"
           >
@@ -47,5 +43,5 @@ export function SiteHeader() {
         </div>
       </div>
     </header>
-  )
+  );
 }
