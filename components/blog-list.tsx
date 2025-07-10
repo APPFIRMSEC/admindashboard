@@ -31,10 +31,14 @@ import {
   FileText
 } from "lucide-react";
 import Link from "next/link";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from "@/components/ui/sheet";
+import { BlogEditor } from "@/components/blog-editor";
 
 export function BlogList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [editingBlog, setEditingBlog] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Mock data - in a real app, this would come from your API
   const blogs = [
@@ -220,10 +224,8 @@ export function BlogList() {
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/blogs/${blog.id}/edit`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
+                      <Button variant="ghost" size="sm" onClick={() => { setEditingBlog(blog); setShowEditModal(true); }}>
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm">
                         <Trash2 className="h-4 w-4" />
@@ -236,6 +238,24 @@ export function BlogList() {
           </Table>
         </CardContent>
       </Card>
+      {/* Blog Edit Modal */}
+      <Sheet open={showEditModal} onOpenChange={setShowEditModal}>
+        <SheetContent side="top" className="max-w-full w-full h-[520px] aspect-[16/5] mx-auto rounded-xl p-0 flex items-center justify-center bg-white shadow-2xl border mt-16">
+          <div className="w-full h-full overflow-y-auto px-8 py-4">
+            <SheetHeader>
+              <SheetTitle>Edit Blog Post</SheetTitle>
+            </SheetHeader>
+            {editingBlog && (
+              <BlogEditor initialData={editingBlog} onSave={() => setShowEditModal(false)} />
+            )}
+            <SheetFooter className="flex gap-2 justify-end">
+              <SheetClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </SheetClose>
+            </SheetFooter>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 } 

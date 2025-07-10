@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
   X
 } from "lucide-react";
 
-export function BlogEditor() {
+export function BlogEditor({ initialData, onSave }: { initialData?: any, onSave?: () => void }) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
@@ -40,9 +40,30 @@ export function BlogEditor() {
   });
   const [newTag, setNewTag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // For local image preview, store the object URL in featuredImage
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        ...formData,
+        ...initialData,
+        tags: initialData.tags || [],
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle image file selection and preview
+  const handleFeaturedImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setFormData(prev => ({ ...prev, featuredImage: url }));
+    }
   };
 
   const handleAddTag = () => {
@@ -73,7 +94,8 @@ export function BlogEditor() {
     console.log("Saving blog post:", formData);
     
     setIsLoading(false);
-    router.push("/blogs");
+    if (onSave) onSave();
+    else router.push("/blogs");
   };
 
   const generateSlug = () => {
@@ -270,18 +292,23 @@ export function BlogEditor() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="featuredImage">Image URL</Label>
-                <Input
+                <Label htmlFor="featuredImage">Featured Image</Label>
+                <input
                   id="featuredImage"
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.featuredImage}
-                  onChange={(e) => handleInputChange("featuredImage", e.target.value)}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFeaturedImageChange}
                 />
+                {formData.featuredImage && (
+                  <img
+                    src={formData.featuredImage}
+                    alt="Preview"
+                    width={256}
+                    height={128}
+                    className="mt-2 rounded w-full max-w-xs h-32 object-cover border"
+                  />
+                )}
               </div>
-              <Button variant="outline" className="w-full">
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Upload Image
-              </Button>
             </CardContent>
           </Card>
 

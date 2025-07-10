@@ -10,6 +10,7 @@ import {
   IconSettings,
   IconUsers,
   IconInnerShadowTop,
+  IconStar,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -37,6 +38,11 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       icon: IconDashboard,
+    },
+    {
+      title: "Featured Post",
+      url: "/featured-posts",
+      icon: IconStar,
     },
     {
       title: "Blog Posts",
