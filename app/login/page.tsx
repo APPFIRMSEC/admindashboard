@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
@@ -21,16 +28,20 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    // Simple validation - in a real app, you'd validate against your backend
-    if (email === "admin@example.com" && password === "password") {
-      // Set authentication cookie
-      document.cookie = "isAuthenticated=true; path=/; max-age=3600"; // 1 hour
-      router.push("/dashboard");
-    } else {
-      setError("Invalid email or password. Try admin@example.com / password");
+      if (result?.error) {
+        setError("Invalid email or password. Try admin@example.com / password");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch {
+      setError("An error occurred during login");
     }
 
     setIsLoading(false);
@@ -95,18 +106,14 @@ export default function LoginPage() {
                 </Button>
               </div>
             </div>
-            
+
             {error && (
               <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 p-3 rounded-md">
                 {error}
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
@@ -114,7 +121,8 @@ export default function LoginPage() {
           <div className="mt-6 text-center text-sm text-muted-foreground">
             <p>Demo credentials:</p>
             <p className="font-mono text-xs mt-1">
-              Email: admin@example.com<br />
+              Email: admin@example.com
+              <br />
               Password: password
             </p>
           </div>
@@ -122,4 +130,4 @@ export default function LoginPage() {
       </Card>
     </div>
   );
-} 
+}
