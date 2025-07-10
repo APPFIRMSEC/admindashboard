@@ -33,11 +33,12 @@ import {
 import Link from "next/link";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from "@/components/ui/sheet";
 import { BlogEditor } from "@/components/blog-editor";
+import type { BlogFormData } from "@/components/blog-editor";
 
 export function BlogList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [editingBlog, setEditingBlog] = useState<any>(null);
+  const [editingBlog, setEditingBlog] = useState<Partial<BlogFormData> | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Mock data - in a real app, this would come from your API

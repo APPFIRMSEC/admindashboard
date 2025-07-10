@@ -18,11 +18,25 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Save, 
   Tag,
-  Image as ImageIcon,
   X
 } from "lucide-react";
 
-export function BlogEditor({ initialData, onSave }: { initialData?: any, onSave?: () => void }) {
+export type BlogFormData = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  status: string;
+  author: string;
+  tags: string[];
+  featuredImage: string;
+  publishDate: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoKeywords: string;
+};
+
+export function BlogEditor({ initialData, onSave }: { initialData?: Partial<BlogFormData>, onSave?: () => void }) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
@@ -300,6 +314,7 @@ export function BlogEditor({ initialData, onSave }: { initialData?: any, onSave?
                   onChange={handleFeaturedImageChange}
                 />
                 {formData.featuredImage && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={formData.featuredImage}
                     alt="Preview"
