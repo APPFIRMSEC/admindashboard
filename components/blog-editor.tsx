@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -15,13 +21,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Save, 
-  Tag,
-  X
-} from "lucide-react";
+import { Save, Tag, X } from "lucide-react";
 
 export type BlogFormData = {
+  id?: string;
   title: string;
   slug: string;
   excerpt: string;
@@ -36,21 +39,27 @@ export type BlogFormData = {
   seoKeywords: string;
 };
 
-export function BlogEditor({ initialData, onSave }: { initialData?: Partial<BlogFormData>, onSave?: () => void }) {
+export function BlogEditor({
+  initialData,
+  onSave,
+}: {
+  initialData?: Partial<BlogFormData>;
+  onSave?: () => void;
+}) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
     excerpt: "",
     content: "",
-    status: "draft",
+    status: "DRAFT",
     author: "Admin",
     tags: [] as string[],
     featuredImage: "",
     publishDate: "",
     seoTitle: "",
     seoDescription: "",
-    seoKeywords: ""
+    seoKeywords: "",
   });
   const [newTag, setNewTag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -68,32 +77,34 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
   }, [initialData]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Handle image file selection and preview
-  const handleFeaturedImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFeaturedImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      setFormData(prev => ({ ...prev, featuredImage: url }));
+      setFormData((prev) => ({ ...prev, featuredImage: url }));
     }
   };
 
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, newTag.trim()]
+        tags: [...prev.tags, newTag.trim()],
       }));
       setNewTag("");
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
   };
 
@@ -101,15 +112,40 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (
+        !formData.status ||
+        !["DRAFT", "SCHEDULED", "PUBLISHED", "ARCHIVED"].includes(
+          formData.status
+        )
+      ) {
+        formData.status = "DRAFT"; // Default to DRAFT if invalid
+      }
 
-    // In a real app, you'd save to your backend here
-    console.log("Saving blog post:", formData);
-    
-    setIsLoading(false);
-    if (onSave) onSave();
-    else router.push("/blogs");
+      const url = initialData?.id
+        ? `/api/blogs/${initialData.id}`
+        : "/api/blogs";
+      const method = initialData?.id ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Error:", errorData); // Debug log
+        throw new Error(errorData.error || "Failed to save blog post");
+      }
+
+      setIsLoading(false);
+      if (onSave) onSave();
+      else router.push("/blogs");
+    } catch (err: unknown) {
+      console.error("Error saving blog post:", err);
+      setIsLoading(false);
+    }
   };
 
   const generateSlug = () => {
@@ -117,7 +153,7 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-    setFormData(prev => ({ ...prev, slug }));
+    setFormData((prev) => ({ ...prev, slug }));
   };
 
   return (
@@ -148,7 +184,9 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
           <Card>
             <CardHeader>
               <CardTitle>Post Details</CardTitle>
-              <CardDescription>Basic information about your blog post</CardDescription>
+              <CardDescription>
+                Basic information about your blog post
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -161,7 +199,7 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
                 <div className="flex gap-2">
@@ -172,9 +210,9 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
                     onChange={(e) => handleInputChange("slug", e.target.value)}
                     required
                   />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={generateSlug}
                     disabled={!formData.title}
                   >
@@ -220,19 +258,25 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
           <Card>
             <CardHeader>
               <CardTitle>Publishing</CardTitle>
-              <CardDescription>Control when and how your post is published</CardDescription>
+              <CardDescription>
+                Control when and how your post is published
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleInputChange("status", value)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="DRAFT">Draft</SelectItem>
+                    <SelectItem value="PUBLISHED">Published</SelectItem>
+                    <SelectItem value="SCHEDULED">Scheduled</SelectItem>
+                    <SelectItem value="ARCHIVED">Archived</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -244,7 +288,9 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
                     id="publishDate"
                     type="datetime-local"
                     value={formData.publishDate}
-                    onChange={(e) => handleInputChange("publishDate", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("publishDate", e.target.value)
+                    }
                   />
                 </div>
               )}
@@ -264,7 +310,9 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
           <Card>
             <CardHeader>
               <CardTitle>Tags</CardTitle>
-              <CardDescription>Add tags to help organize your content</CardDescription>
+              <CardDescription>
+                Add tags to help organize your content
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
@@ -272,13 +320,15 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
                   placeholder="Add a tag"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTag())}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), handleAddTag())
+                  }
                 />
                 <Button type="button" variant="outline" onClick={handleAddTag}>
                   <Tag className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               {formData.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {formData.tags.map((tag) => (
@@ -302,7 +352,9 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
           <Card>
             <CardHeader>
               <CardTitle>Featured Image</CardTitle>
-              <CardDescription>Add a featured image for your post</CardDescription>
+              <CardDescription>
+                Add a featured image for your post
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -331,7 +383,9 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
           <Card>
             <CardHeader>
               <CardTitle>SEO Settings</CardTitle>
-              <CardDescription>Optimize your post for search engines</CardDescription>
+              <CardDescription>
+                Optimize your post for search engines
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -340,28 +394,34 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
                   id="seoTitle"
                   placeholder="SEO optimized title"
                   value={formData.seoTitle}
-                  onChange={(e) => handleInputChange("seoTitle", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("seoTitle", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="seoDescription">SEO Description</Label>
                 <Textarea
                   id="seoDescription"
                   placeholder="SEO meta description"
                   value={formData.seoDescription}
-                  onChange={(e) => handleInputChange("seoDescription", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("seoDescription", e.target.value)
+                  }
                   rows={3}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="seoKeywords">SEO Keywords</Label>
                 <Input
                   id="seoKeywords"
                   placeholder="keyword1, keyword2, keyword3"
                   value={formData.seoKeywords}
-                  onChange={(e) => handleInputChange("seoKeywords", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("seoKeywords", e.target.value)
+                  }
                 />
               </div>
             </CardContent>
@@ -370,4 +430,4 @@ export function BlogEditor({ initialData, onSave }: { initialData?: Partial<Blog
       </form>
     </div>
   );
-} 
+}
