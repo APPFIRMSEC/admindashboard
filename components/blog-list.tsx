@@ -38,58 +38,70 @@ import type { BlogFormData } from "@/components/blog-editor";
 export function BlogList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [editingBlog, setEditingBlog] = useState<Partial<BlogFormData> | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<BlogFormData | null>(null);
 
   // Mock data - in a real app, this would come from your API
   const blogs = [
     {
       id: 1,
       title: "Getting Started with Next.js 15",
-      slug: "getting-started-nextjs-15",
+      excerpt: "Learn how to build modern web applications with Next.js 15 and its new features.",
       status: "published",
       author: "John Doe",
       publishedAt: "2024-01-15",
-      updatedAt: "2024-01-15",
-      readTime: "5 min read",
       views: 1234,
-      excerpt: "Learn how to build modern web applications with Next.js 15..."
+      slug: "getting-started-nextjs-15",
+      content: "Full blog content here...",
+      tags: ["nextjs", "react", "web development"],
+      seoTitle: "Getting Started with Next.js 15 - Complete Guide",
+      seoDescription: "Learn how to build modern web applications with Next.js 15 and its new features.",
+      seoKeywords: "nextjs, react, web development, tutorial"
     },
     {
       id: 2,
       title: "Advanced TypeScript Patterns",
-      slug: "advanced-typescript-patterns",
-      status: "draft",
+      excerpt: "Explore advanced TypeScript patterns and best practices for better code quality.",
+      status: "published",
       author: "Jane Smith",
-      publishedAt: null,
-      updatedAt: "2024-01-14",
-      readTime: "8 min read",
-      views: 0,
-      excerpt: "Explore advanced TypeScript patterns for better code organization..."
+      publishedAt: "2024-01-10",
+      views: 987,
+      slug: "advanced-typescript-patterns",
+      content: "Full blog content here...",
+      tags: ["typescript", "patterns", "best practices"],
+      seoTitle: "Advanced TypeScript Patterns - Best Practices",
+      seoDescription: "Explore advanced TypeScript patterns and best practices for better code quality.",
+      seoKeywords: "typescript, patterns, best practices, programming"
     },
     {
       id: 3,
       title: "Building Scalable APIs with Node.js",
-      slug: "building-scalable-apis-nodejs",
-      status: "published",
+      excerpt: "A comprehensive guide to building scalable REST APIs using Node.js and Express.",
+      status: "draft",
       author: "Mike Johnson",
-      publishedAt: "2024-01-10",
-      updatedAt: "2024-01-12",
-      readTime: "12 min read",
-      views: 856,
-      excerpt: "A comprehensive guide to building scalable REST APIs..."
+      publishedAt: null,
+      views: 0,
+      slug: "building-scalable-apis-nodejs",
+      content: "Full blog content here...",
+      tags: ["nodejs", "api", "express", "scalable"],
+      seoTitle: "Building Scalable APIs with Node.js - Complete Guide",
+      seoDescription: "A comprehensive guide to building scalable REST APIs using Node.js and Express.",
+      seoKeywords: "nodejs, api, express, scalable, rest"
     },
     {
       id: 4,
-      title: "CSS Grid vs Flexbox: When to Use What",
-      slug: "css-grid-vs-flexbox",
+      title: "Modern CSS Techniques",
+      excerpt: "Discover modern CSS techniques and frameworks for better web design.",
       status: "scheduled",
       author: "Sarah Wilson",
       publishedAt: "2024-01-20",
-      updatedAt: "2024-01-13",
-      readTime: "6 min read",
       views: 0,
-      excerpt: "Understanding the differences between CSS Grid and Flexbox..."
+      slug: "modern-css-techniques",
+      content: "Full blog content here...",
+      tags: ["css", "web design", "frontend"],
+      seoTitle: "Modern CSS Techniques - Web Design Guide",
+      seoDescription: "Discover modern CSS techniques and frameworks for better web design.",
+      seoKeywords: "css, web design, frontend, modern"
     }
   ];
 
@@ -168,88 +180,110 @@ export function BlogList() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Author</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Published</TableHead>
-                <TableHead>Views</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBlogs.map((blog) => (
-                <TableRow key={blog.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="font-medium">{blog.title}</p>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {blog.excerpt}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <FileText className="h-3 w-3" />
-                        {blog.readTime}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      {blog.author}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(blog.status)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      {blog.publishedAt ? (
-                        <span className="text-sm">
-                          {new Date(blog.publishedAt).toLocaleDateString()}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Not published</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm font-medium">{blog.views.toLocaleString()}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/blogs/${blog.id}`}>
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => { setEditingBlog(blog); setShowEditModal(true); }}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead className="hidden md:table-cell">Author</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Published</TableHead>
+                  <TableHead className="hidden lg:table-cell">Views</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredBlogs.map((blog) => (
+                  <TableRow key={blog.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <p className="font-medium">{blog.title}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {blog.excerpt}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground md:hidden">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {blog.author}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {blog.publishedAt ? new Date(blog.publishedAt).toLocaleDateString() : "Not published"}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        {blog.author}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(blog.status)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {blog.publishedAt ? (
+                          <span className="text-sm">
+                            {new Date(blog.publishedAt).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not published</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <span className="text-sm font-medium">{blog.views.toLocaleString()}</span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/blogs/${blog.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => { 
+                            setEditingBlog(blog); 
+                            setShowEditModal(true); 
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
+
       {/* Blog Edit Modal */}
       <Sheet open={showEditModal} onOpenChange={setShowEditModal}>
-        <SheetContent side="top" className="max-w-full w-full h-[520px] aspect-[16/5] mx-auto rounded-xl p-0 flex items-center justify-center bg-white shadow-2xl border mt-16">
-          <div className="w-full h-full overflow-y-auto px-8 py-4">
-            <SheetHeader>
+        <SheetContent 
+          side="top" 
+          className="w-full h-full max-h-[90vh] overflow-y-auto p-0"
+        >
+          <div className="w-full h-full overflow-y-auto px-4 py-4 sm:px-6">
+            <SheetHeader className="mb-6">
               <SheetTitle>Edit Blog Post</SheetTitle>
             </SheetHeader>
             {editingBlog && (
-              <BlogEditor initialData={editingBlog} onSave={() => setShowEditModal(false)} />
+              <BlogEditor 
+                initialData={editingBlog} 
+                onSave={() => setShowEditModal(false)} 
+              />
             )}
-            <SheetFooter className="flex gap-2 justify-end">
+            <SheetFooter className="flex gap-2 justify-end mt-6">
               <SheetClose asChild>
                 <Button type="button" variant="outline">Cancel</Button>
               </SheetClose>
