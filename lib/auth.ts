@@ -12,6 +12,14 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
+  // Use Vercel's environment variables for dynamic URLs
+  ...(process.env.VERCEL_URL && {
+    url: `https://${process.env.VERCEL_URL}`,
+  }),
+  // Fallback for local development
+  ...(process.env.NODE_ENV === "development" && {
+    url: "http://localhost:3000",
+  }),
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -20,36 +28,57 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("🔍 Auth: Starting authorization for:", credentials?.email);
+
         if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Auth: Missing credentials");
           return null;
         }
 
-        const user = await db.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
+        try {
+          console.log("🔍 Auth: Looking up user in database...");
 
-        if (!user) {
+          const user = await db.user.findUnique({
+            where: {
+              email: credentials.email,
+            },
+          });
+
+          console.log("👤 Auth: User found:", user ? "Yes" : "No");
+
+          if (!user) {
+            console.log("❌ Auth: User not found");
+            return null;
+          }
+
+          console.log("🔐 Auth: Checking password...");
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          console.log("🔐 Auth: Password valid:", isPasswordValid);
+
+          if (!isPasswordValid) {
+            console.log("❌ Auth: Invalid password");
+            return null;
+          }
+
+          const userData = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            avatar: user.avatar === null ? undefined : user.avatar,
+          };
+
+          console.log("✅ Auth: Authorization successful for:", userData.email);
+          return userData;
+        } catch (error) {
+          console.error("💥 Auth: Database error:", error);
           return null;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          avatar: user.avatar === null ? undefined : user.avatar,
-        };
       },
     }),
   ],
