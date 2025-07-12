@@ -1,105 +1,192 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Plus, 
-  Search, 
-  Edit, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   Mail,
   Calendar,
   Shield,
-  MoreHorizontal
+  MoreHorizontal,
 } from "lucide-react";
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  avatar?: string;
+  createdAt: string;
+  lastLogin?: string;
+  joinedAt?: string;
+};
 
 export function UserList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [createFormData, setCreateFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "AUTHOR",
+    avatar: "",
+  });
+  const [editFormData, setEditFormData] = useState({});
 
-  // Mock data - in a real app, this would come from your API
-  const users = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      role: "admin",
-      status: "active",
-      avatar: "/avatars/john.jpg",
-      joinedAt: "2024-01-01",
-      lastLogin: "2024-01-15"
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      role: "editor",
-      status: "active",
-      avatar: "/avatars/jane.jpg",
-      joinedAt: "2024-01-05",
-      lastLogin: "2024-01-14"
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      role: "author",
-      status: "active",
-      avatar: "/avatars/mike.jpg",
-      joinedAt: "2024-01-10",
-      lastLogin: "2024-01-13"
-    },
-    {
-      id: 4,
-      name: "Sarah Wilson",
-      email: "sarah@example.com",
-      role: "author",
-      status: "inactive",
-      avatar: "/avatars/sarah.jpg",
-      joinedAt: "2024-01-08",
-      lastLogin: "2024-01-05"
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/users");
+      if (!response.ok) throw new Error("Failed to fetch users");
+      const data = await response.json();
+      setUsers(data.users);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createFormData),
+      });
+
+      if (!response.ok) throw new Error("Failed to create user");
+
+      fetchUsers();
+      setShowCreateForm(false);
+      setCreateFormData({
+        name: "",
+        email: "",
+        password: "",
+        role: "AUTHOR",
+        avatar: "",
+      });
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    }
+  };
+
+  const handleUpdateUser = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (!response.ok) throw new Error("Failed to update user");
+
+      fetchUsers();
+      setEditingUser(null);
+      setEditFormData({});
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete user");
+
+      fetchUsers();
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    }
+  };
 
   const getRoleBadge = (role: string) => {
     const variants = {
       admin: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
       editor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-      author: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+      author:
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
     };
-    return <Badge className={variants[role as keyof typeof variants]}>{role}</Badge>;
+    return (
+      <Badge className={variants[role.toLowerCase() as keyof typeof variants]}>
+        {role}
+      </Badge>
+    );
   };
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      active: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-      inactive: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+      active:
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      inactive: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
     };
-    return <Badge className={variants[status as keyof typeof variants]}>{status}</Badge>;
+    return (
+      <Badge
+        className={variants[status.toLowerCase() as keyof typeof variants]}
+      >
+        {status}
+      </Badge>
+    );
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
+  const filteredUsers = users.filter((user: User) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole =
+      roleFilter === "all" || user.role.toLowerCase() === roleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -113,7 +200,7 @@ export function UserList() {
             Manage user accounts and permissions
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowCreateForm(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add User
         </Button>
@@ -151,6 +238,19 @@ export function UserList() {
         </CardContent>
       </Card>
 
+      {/* Loading and Error States */}
+      {isLoading && (
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+
       {/* Users Table */}
       <Card>
         <CardHeader>
@@ -172,13 +272,18 @@ export function UserList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {filteredUsers.map((user: User) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
                       <Avatar>
                         <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarFallback>
+                          {user.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">{user.name}</p>
@@ -189,17 +294,13 @@ export function UserList() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getRoleBadge(user.role)}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(user.status)}
-                  </TableCell>
+                  <TableCell>{getRoleBadge(user.role)}</TableCell>
+                  <TableCell>{getStatusBadge(user.status)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
-                        {new Date(user.joinedAt).toLocaleDateString()}
+                        {new Date(user.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </TableCell>
@@ -207,20 +308,35 @@ export function UserList() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
-                        {new Date(user.lastLogin).toLocaleDateString()}
+                        {user.lastLogin
+                          ? new Date(user.lastLogin).toLocaleDateString()
+                          : "Never"}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingUser(user.id);
+                          setEditFormData({
+                            name: user.name,
+                            email: user.email,
+                            role: user.role,
+                            status: user.status,
+                          });
+                        }}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <Shield className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -230,6 +346,74 @@ export function UserList() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Create User Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-96">
+            <h3 className="text-lg font-semibold mb-4">Create New User</h3>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <Input
+                placeholder="Name"
+                value={createFormData.name}
+                onChange={(e) =>
+                  setCreateFormData({ ...createFormData, name: e.target.value })
+                }
+                required
+              />
+              <Input
+                type="email"
+                placeholder="Email"
+                value={createFormData.email}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    email: e.target.value,
+                  })
+                }
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={createFormData.password}
+                onChange={(e) =>
+                  setCreateFormData({
+                    ...createFormData,
+                    password: e.target.value,
+                  })
+                }
+                required
+              />
+              <Select
+                value={createFormData.role}
+                onValueChange={(value) =>
+                  setCreateFormData({ ...createFormData, role: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="AUTHOR">Author</SelectItem>
+                  <SelectItem value="EDITOR">Editor</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex gap-2">
+                <Button type="submit">Create User</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}
