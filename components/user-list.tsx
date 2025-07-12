@@ -27,16 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Mail,
-  Calendar,
-  Shield,
-  MoreHorizontal,
-} from "lucide-react";
+import { Plus, Search, Edit, Trash2, Mail, Calendar } from "lucide-react";
 
 type User = {
   id: string;
@@ -114,7 +105,7 @@ export function UserList() {
     }
   };
 
-  const handleUpdateUser = async (userId: string) => {
+  /* const handleUpdateUser = async (userId: string) => {
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
@@ -132,7 +123,7 @@ export function UserList() {
         err instanceof Error ? err.message : "An unknown error occurred"
       );
     }
-  };
+  }; */
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
@@ -327,6 +318,8 @@ export function UserList() {
                             role: user.role,
                             status: user.status,
                           });
+                          console.log(editingUser);
+                          console.log(editFormData);
                         }}
                       >
                         <Edit className="h-4 w-4" />

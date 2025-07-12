@@ -351,6 +351,7 @@ export function BlogList() {
                   await fetchBlogs(); // Wait for the fetch to complete
                   setShowEditModal(false);
                   setIsEditing(false);
+                  console.log(isEditing);
                 }}
               />
             )}
