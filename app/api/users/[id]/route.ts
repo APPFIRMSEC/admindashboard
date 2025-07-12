@@ -19,13 +19,14 @@ const updateUserSchema = z.object({
 // GET /api/users/[id] - Get a specific user
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
+    const { id } = await params; // Await params
 
     const user = await db.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -60,17 +61,17 @@ export async function GET(
 // PATCH /api/users/[id] - Update a user
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
-
+    const { id } = await params; // Await params
     const body = await request.json();
     const validatedData = updateUserSchema.parse(body);
 
     // Check if user exists
     const existingUser = await db.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingUser) {
@@ -98,7 +99,7 @@ export async function PATCH(
     }
 
     const user = await db.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -130,14 +131,15 @@ export async function PATCH(
 // DELETE /api/users/[id] - Delete a user
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
+    const { id } = await params; // Await params
 
     // Check if user exists
     const existingUser = await db.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingUser) {
@@ -159,7 +161,7 @@ export async function DELETE(
     }
 
     await db.user.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "User deleted successfully" });

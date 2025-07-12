@@ -1,39 +1,51 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, 
-  MessageCircle, 
-  Mail, 
-  Phone, 
+import {
+  BookOpen,
+  MessageCircle,
+  Mail,
+  Phone,
   FileText,
   Video,
   Download,
 } from "lucide-react";
+import Link from "next/link";
 
 export function HelpSupport() {
   const faqs = [
     {
       question: "How do I create a new blog post?",
-      answer: "Navigate to the Blog Posts section and click 'New Post'. Fill in the title, content, and other details, then save as draft or publish immediately."
+      answer:
+        "Navigate to the Blog Posts section and click 'New Post'. Fill in the title, content, and other details, then save as draft or publish immediately.",
     },
     {
       question: "How do I upload a podcast episode?",
-      answer: "Go to the Podcasts section and click 'New Episode'. Upload your audio file, add episode details, and set the publishing status."
+      answer:
+        "Go to the Podcasts section and click 'New Episode'. Upload your audio file, add episode details, and set the publishing status.",
     },
     {
       question: "How do I manage media files?",
-      answer: "Use the Media Library to upload, organize, and manage all your images, audio files, and documents. You can search, filter, and copy file URLs."
+      answer:
+        "Use the Media Library to upload, organize, and manage all your images, audio files, and documents. You can search, filter, and copy file URLs.",
     },
     {
       question: "How do I change site settings?",
-      answer: "Visit the Site Settings page to update your site information, contact details, social media links, and content configuration."
+      answer:
+        "Visit the Site Settings page to update your site information, contact details, social media links, and content configuration.",
     },
     {
       question: "How do I add new users?",
-      answer: "Go to the Users section and click 'Add User'. Set their role (admin, editor, or author) and send them an invitation email."
-    }
+      answer:
+        "Go to the Users section and click 'Add User'. Set their role (admin, editor, or author) and send them an invitation email.",
+    },
   ];
 
   const resources = [
@@ -41,26 +53,26 @@ export function HelpSupport() {
       title: "User Guide",
       description: "Complete guide to using the admin dashboard",
       icon: BookOpen,
-      href: "#"
+      href: "#",
     },
     {
       title: "Video Tutorials",
       description: "Step-by-step video guides",
       icon: Video,
-      href: "#"
+      href: "#",
     },
     {
       title: "API Documentation",
       description: "Technical documentation for developers",
       icon: FileText,
-      href: "#"
+      href: "#",
     },
     {
       title: "Download Manual",
       description: "PDF version of the user manual",
       icon: Download,
-      href: "#"
-    }
+      href: "#",
+    },
   ];
 
   return (
@@ -91,14 +103,18 @@ export function HelpSupport() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Email Support</p>
-                  <p className="text-sm text-muted-foreground">support@mycompany.com</p>
+                  <p className="text-sm text-muted-foreground">
+                    support@mycompany.com
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Phone Support</p>
-                  <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
+                  <p className="text-sm text-muted-foreground">
+                    +1 (555) 123-4567
+                  </p>
                 </div>
               </div>
             </div>
@@ -113,16 +129,14 @@ export function HelpSupport() {
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>
-              Common tasks and shortcuts
-            </CardDescription>
+            <CardDescription>Common tasks and shortcuts</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <Button variant="outline" className="w-full justify-start" asChild>
-              <a href="/blogs/new">
+              <Link href="/blogs/new">
                 <FileText className="mr-2 h-4 w-4" />
                 Create New Blog Post
-              </a>
+              </Link>
             </Button>
             <Button variant="outline" className="w-full justify-start" asChild>
               <a href="/podcasts/new">
@@ -150,22 +164,25 @@ export function HelpSupport() {
       <Card>
         <CardHeader>
           <CardTitle>Resources & Documentation</CardTitle>
-          <CardDescription>
-            Helpful guides and documentation
-          </CardDescription>
+          <CardDescription>Helpful guides and documentation</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {resources.map((resource) => {
               const Icon = resource.icon;
               return (
-                <Card key={resource.title} className="cursor-pointer hover:bg-muted/50">
+                <Card
+                  key={resource.title}
+                  className="cursor-pointer hover:bg-muted/50"
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <Icon className="h-8 w-8 text-muted-foreground" />
                       <div>
                         <p className="font-medium">{resource.title}</p>
-                        <p className="text-sm text-muted-foreground">{resource.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {resource.description}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
@@ -180,9 +197,7 @@ export function HelpSupport() {
       <Card>
         <CardHeader>
           <CardTitle>Frequently Asked Questions</CardTitle>
-          <CardDescription>
-            Common questions and answers
-          </CardDescription>
+          <CardDescription>Common questions and answers</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -197,4 +212,4 @@ export function HelpSupport() {
       </Card>
     </div>
   );
-} 
+}
