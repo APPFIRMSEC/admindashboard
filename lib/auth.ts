@@ -12,6 +12,14 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
+  // Use Vercel's environment variables for dynamic URLs
+  ...(process.env.VERCEL_URL && {
+    url: `https://${process.env.VERCEL_URL}`,
+  }),
+  // Fallback for local development
+  ...(process.env.NODE_ENV === "development" && {
+    url: "http://localhost:3000",
+  }),
   providers: [
     CredentialsProvider({
       name: "credentials",
