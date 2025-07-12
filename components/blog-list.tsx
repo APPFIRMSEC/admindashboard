@@ -355,7 +355,7 @@ export function BlogList() {
                 }}
               />
             )}
-            <SheetFooter className="flex gap-2 justify-end">
+            <SheetFooter className="flex gap-2 justify-end mt-6">
               <SheetClose asChild>
                 <Button type="button" variant="outline">
                   Cancel

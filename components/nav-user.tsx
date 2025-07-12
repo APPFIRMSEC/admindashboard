@@ -6,6 +6,9 @@ import {
   IconLogout,
   IconNotification,
   IconUserCircle,
+  IconWorld,
+  IconSun,
+  IconMoon,
 } from "@tabler/icons-react"
 
 import {
@@ -28,6 +31,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useSiteContext } from "@/contexts/site-context"
+import { useTheme } from "next-themes"
 
 export function NavUser({
   user,
@@ -39,6 +44,13 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { currentSite, setCurrentSite } = useSiteContext()
+  const { theme, setTheme } = useTheme()
+
+  const sites = [
+    { id: "appfirmsec", name: "AppFirmSec", description: "Full features" },
+    { id: "ennieboateng", name: "EnnieBoatEng", description: "Blogging only" },
+  ]
 
   return (
     <SidebarMenu>
@@ -89,12 +101,41 @@ export function NavUser({
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <IconCreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
                 <IconNotification />
                 Notifications
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Switch Site</DropdownMenuLabel>
+              {sites.map((site) => (
+                <DropdownMenuItem
+                  key={site.id}
+                  onClick={() => setCurrentSite(site.id)}
+                  className={currentSite === site.id ? "bg-accent" : ""}
+                >
+                  <IconWorld className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{site.name}</span>
+                    <span className="text-xs text-muted-foreground">{site.description}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Theme</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setTheme("light")}>
+                <IconSun className="h-4 w-4" />
+                Light Mode
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>
+                <IconMoon className="h-4 w-4" />
+                Dark Mode
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>
+                <IconWorld className="h-4 w-4" />
+                System
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

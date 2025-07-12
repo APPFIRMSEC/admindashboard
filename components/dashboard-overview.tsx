@@ -10,20 +10,41 @@ import {
   Users, 
   TrendingUp, 
   Plus,
-  Edit
+  Edit,
+  Eye,
+  Mail,
+  Star
 } from "lucide-react";
 import Link from "next/link";
+import { useSiteContext } from "@/contexts/site-context";
 
 export function DashboardOverview() {
+  const { currentSite } = useSiteContext();
+
   // Mock data - in a real app, this would come from your API
-  const stats = [
+  const appFirmSecStats = [
     { title: "Total Blog Posts", value: "24", icon: FileText, change: "+12%", changeType: "positive" },
     { title: "Podcast Episodes", value: "18", icon: Mic, change: "+8%", changeType: "positive" },
     { title: "Media Files", value: "156", icon: Image, change: "+23%", changeType: "positive" },
     { title: "Active Users", value: "1,234", icon: Users, change: "+5%", changeType: "positive" },
+    { title: "Website Traffic", value: "12,444", icon: Eye, change: "+55%", changeType: "positive"},
+    { title: "Newsletter Subscribers", value: "1,234", icon: Mail, change: "-3%", changeType: "negative"},
+    { title: "Blog Readers", value: "3,333", icon: Users, change: "+3", changeType: "positive"},
+    { title: "Featured Posts", value: "6,999", icon: Star, change: "+9", changeType: "positive"},
   ];
 
-  const recentActivity = [
+  const ennieBoatEngStats = [
+    { title: "Total Blog Posts", value: "15", icon: FileText, change: "+8%", changeType: "positive" },
+    { title: "Media Files", value: "89", icon: Image, change: "+15%", changeType: "positive" },
+    { title: "Website Traffic", value: "8,234", icon: Eye, change: "+32%", changeType: "positive"},
+    { title: "Newsletter Subscribers", value: "567", icon: Mail, change: "+2%", changeType: "positive"},
+    { title: "Blog Readers", value: "2,111", icon: Users, change: "+7", changeType: "positive"},
+    { title: "Featured Posts", value: "3,456", icon: Star, change: "+5", changeType: "positive"},
+  ];
+
+  const stats = currentSite === "appfirmsec" ? appFirmSecStats : ennieBoatEngStats;
+
+  const appFirmSecActivity = [
     {
       id: 1,
       type: "blog",
@@ -58,12 +79,57 @@ export function DashboardOverview() {
     }
   ];
 
-  const quickActions = [
+  const ennieBoatEngActivity = [
+    {
+      id: 1,
+      type: "blog",
+      title: "Engineering Best Practices",
+      status: "published",
+      date: "2 hours ago",
+      author: "John Doe"
+    },
+    {
+      id: 2,
+      type: "blog",
+      title: "Modern Boat Design Principles",
+      status: "published",
+      date: "1 day ago",
+      author: "Jane Smith"
+    },
+    {
+      id: 3,
+      type: "blog",
+      title: "Marine Engineering Fundamentals",
+      status: "draft",
+      date: "3 days ago",
+      author: "Mike Johnson"
+    },
+    {
+      id: 4,
+      type: "media",
+      title: "boat-design.jpg uploaded",
+      status: "uploaded",
+      date: "1 week ago",
+      author: "Admin"
+    }
+  ];
+
+  const recentActivity = currentSite === "appfirmsec" ? appFirmSecActivity : ennieBoatEngActivity;
+
+  const appFirmSecQuickActions = [
     { title: "New Blog Post", icon: Plus, href: "/blogs/new", color: "bg-blue-500" },
     { title: "Upload Podcast", icon: Mic, href: "/podcasts/new", color: "bg-green-500" },
     { title: "Add Media", icon: Image, href: "/media/upload", color: "bg-purple-500" },
     { title: "Site Settings", icon: Edit, href: "/settings", color: "bg-orange-500" },
   ];
+
+  const ennieBoatEngQuickActions = [
+    { title: "New Blog Post", icon: Plus, href: "/blogs/new", color: "bg-blue-500" },
+    { title: "Add Media", icon: Image, href: "/media/upload", color: "bg-purple-500" },
+    { title: "Site Settings", icon: Edit, href: "/settings", color: "bg-orange-500" },
+  ];
+
+  const quickActions = currentSite === "appfirmsec" ? appFirmSecQuickActions : ennieBoatEngQuickActions;
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -84,13 +150,21 @@ export function DashboardOverview() {
     return <Icon className="h-4 w-4" />;
   };
 
+  const siteName = currentSite === "appfirmsec" ? "AppFirmSec" : "EnnieBoatEng";
+  const siteDescription = currentSite === "appfirmsec" 
+    ? "Here's what's happening with your content today." 
+    : "Here's what's happening with your engineering blog today.";
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       {/* Welcome Section */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Welcome back, Admin!</h1>
         <p className="text-muted-foreground">
-          Here&apos;s what&apos;s happening with your content today.
+          Managing: <span className="font-semibold text-primary">{siteName}</span>
+        </p>
+        <p className="text-muted-foreground">
+          {siteDescription}
         </p>
       </div>
 
