@@ -120,12 +120,32 @@ export async function POST(request: NextRequest) {
         }
       : undefined;
 
+    // Handle publish date - convert publishDate to publishedAt
+    let publishedAt = undefined;
+    if (validatedData.publishDate) {
+      publishedAt = new Date(validatedData.publishDate);
+    } else if (validatedData.status === "PUBLISHED") {
+      publishedAt = new Date();
+    }
+
+    // Create blog data without publishDate
+    const blogData = {
+      title: validatedData.title,
+      slug: validatedData.slug,
+      excerpt: validatedData.excerpt,
+      content: validatedData.content,
+      status: validatedData.status,
+      featuredImage: validatedData.featuredImage,
+      seoTitle: validatedData.seoTitle,
+      seoDescription: validatedData.seoDescription,
+      seoKeywords: validatedData.seoKeywords,
+      authorId: user.id,
+      publishedAt,
+      tags: tagConnections,
+    };
+
     const blog = await db.blogPost.create({
-      data: {
-        ...validatedData,
-        authorId: user.id,
-        tags: tagConnections,
-      },
+      data: blogData,
       include: {
         author: {
           select: {

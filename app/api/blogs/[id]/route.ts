@@ -65,7 +65,6 @@ export async function GET(
 }
 
 // PATCH /api/blogs/[id] - Update a blog post
-// PATCH /api/blogs/[id] - Update a blog post
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
