@@ -5,8 +5,13 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { useSiteContext } from "@/contexts/site-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function SiteHeader() {
+  const { currentSite } = useSiteContext();
+  const siteName = currentSite === "appfirmsec" ? "AppFirmSec" : "EnnieBoatEng";
+
   const handleLogout = () => {
     signOut({ callbackUrl: "/login" });
   };
@@ -19,18 +24,9 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <h1 className="text-base font-medium">Admin Dashboard</h1>
+        <h1 className="text-base font-medium">{siteName} Admin Dashboard</h1>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-            <a
-              href="https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(examples)/dashboard"
-              rel="noopener noreferrer"
-              target="_blank"
-              className="dark:text-foreground"
-            >
-              GitHub
-            </a>
-          </Button>
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="sm"

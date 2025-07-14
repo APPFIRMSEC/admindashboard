@@ -84,8 +84,8 @@ export function BlogList() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingBlog, setEditingBlog] = useState<Partial<BlogFormData> | null>(
-    null
+  const [editingBlog, setEditingBlog] = useState<Partial<BlogFormData> | undefined>(
+    undefined
   );
   const [showEditModal, setShowEditModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -355,7 +355,7 @@ export function BlogList() {
                 }}
               />
             )}
-            <SheetFooter className="flex gap-2 justify-end">
+            <SheetFooter className="flex gap-2 justify-end mt-6">
               <SheetClose asChild>
                 <Button type="button" variant="outline">
                   Cancel

@@ -307,30 +307,32 @@ export function FeaturedPostsEditor() {
                   onChange={e => handleInputChange("author", e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={value => handleInputChange("status", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={value => handleInputChange("category", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Homepage">Homepage</SelectItem>
-                    <SelectItem value="Sidebar">Sidebar</SelectItem>
-                    <SelectItem value="Footer">Footer</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={value => handleInputChange("status", value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={formData.category} onValueChange={value => handleInputChange("category", value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Homepage">Homepage</SelectItem>
+                      <SelectItem value="Sidebar">Sidebar</SelectItem>
+                      <SelectItem value="Footer">Footer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
@@ -361,9 +363,12 @@ export function FeaturedPostsEditor() {
       </form>
       {/* Edit Modal (Sheet) */}
       <Sheet open={showEditModal} onOpenChange={setShowEditModal}>
-        <SheetContent side="top" className="max-w-full w-full h-[520px] aspect-[16/5] mx-auto rounded-xl p-0 flex items-center justify-center bg-white shadow-2xl border mt-16">
-          <div className="w-full h-full overflow-y-auto px-8 py-4">
-            <SheetHeader>
+        <SheetContent 
+          side="top" 
+          className="w-full h-full max-h-[90vh] overflow-y-auto p-0"
+        >
+          <div className="w-full h-full overflow-y-auto px-4 py-4 sm:px-6">
+            <SheetHeader className="mb-6">
               <SheetTitle>Edit Featured Post</SheetTitle>
             </SheetHeader>
             <form
@@ -402,48 +407,52 @@ export function FeaturedPostsEditor() {
                   <Image src={formData.imageUrl} alt="Preview" width={256} height={128} className="mt-2 rounded w-full max-w-xs h-32 object-cover border" />
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-author">Author</Label>
-                <Input
-                  id="edit-author"
-                  value={formData.author}
-                  onChange={e => handleInputChange("author", e.target.value)}
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-author">Author</Label>
+                  <Input
+                    id="edit-author"
+                    value={formData.author}
+                    onChange={e => handleInputChange("author", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="text"
+                    placeholder="e.g. 2024-01-15"
+                    value={formData.date}
+                    onChange={e => handleInputChange("date", e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select value={formData.status} onValueChange={value => handleInputChange("status", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-category">Category</Label>
-                <Select value={formData.category} onValueChange={value => handleInputChange("category", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Homepage">Homepage</SelectItem>
-                    <SelectItem value="Sidebar">Sidebar</SelectItem>
-                    <SelectItem value="Footer">Footer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-date">Date</Label>
-                <Input
-                  id="edit-date"
-                  type="text"
-                  placeholder="e.g. 2024-01-15"
-                  value={formData.date}
-                  onChange={e => handleInputChange("date", e.target.value)}
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select value={formData.status} onValueChange={value => handleInputChange("status", value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Category</Label>
+                  <Select value={formData.category} onValueChange={value => handleInputChange("category", value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Homepage">Homepage</SelectItem>
+                      <SelectItem value="Sidebar">Sidebar</SelectItem>
+                      <SelectItem value="Footer">Footer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -454,7 +463,7 @@ export function FeaturedPostsEditor() {
                 />
                 <Label htmlFor="edit-featured">Featured</Label>
               </div>
-              <SheetFooter className="flex gap-2 justify-end">
+              <SheetFooter className="flex gap-2 justify-end mt-6">
                 <SheetClose asChild>
                   <Button type="button" variant="outline">Cancel</Button>
                 </SheetClose>

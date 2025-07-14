@@ -11,6 +11,7 @@ import {
   IconUsers,
   IconInnerShadowTop,
   IconStar,
+  IconEdit,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -26,18 +27,21 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { useSiteContext } from "@/contexts/site-context"
 
-const data = {
-  user: {
-    name: "Admin",
-    email: "admin@example.com",
-    avatar: "/avatars/admin.jpg",
-  },
-  navMain: [
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { currentSite } = useSiteContext();
+
+  const appFirmSecNavMain = [
     {
       title: "Dashboard",
       url: "/dashboard",
       icon: IconDashboard,
+    },
+    {
+      title: "Edit Home Page",
+      url: "/edit-home",
+      icon: IconEdit,
     },
     {
       title: "Featured Post",
@@ -64,35 +68,77 @@ const data = {
       url: "/users",
       icon: IconUsers,
     },
-  ],
-  navSecondary: [
-    {
-      title: "Site Settings",
-      url: "/settings",
-      icon: IconSettings,
-    },
+  ];
 
-  ],
-  documents: [
+  const ennieBoatEngNavMain = [
     {
-      name: "Draft Posts",
-      url: "/blogs?status=draft",
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: IconDashboard,
+    },
+    {
+      title: "Edit Home Page",
+      url: "/edit-home",
+      icon: IconEdit,
+    },
+    {
+      title: "Featured Post",
+      url: "/featured-posts",
+      icon: IconStar,
+    },
+    {
+      title: "Blog Posts",
+      url: "/blogs",
       icon: IconFileDescription,
     },
     {
-      name: "Scheduled Posts",
-      url: "/blogs?status=scheduled",
-      icon: IconFileDescription,
+      title: "Media Library",
+      url: "/media",
+      icon: IconPhoto,
     },
     {
-      name: "Published Posts",
-      url: "/blogs?status=published",
-      icon: IconFileDescription,
+      title: "Users",
+      url: "/users",
+      icon: IconUsers,
     },
-  ],
-}
+  ];
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const navMain = currentSite === "appfirmsec" ? appFirmSecNavMain : ennieBoatEngNavMain;
+
+  const data = {
+    user: {
+      name: "Admin",
+      email: "admin@example.com",
+      avatar: "/avatars/admin.jpg",
+    },
+    navSecondary: [
+      {
+        title: "Site Settings",
+        url: "/settings",
+        icon: IconSettings,
+      },
+    ],
+    documents: [
+      {
+        name: "Draft Posts",
+        url: "/blogs?status=draft",
+        icon: IconFileDescription,
+      },
+      {
+        name: "Scheduled Posts",
+        url: "/blogs?status=scheduled",
+        icon: IconFileDescription,
+      },
+      {
+        name: "Published Posts",
+        url: "/blogs?status=published",
+        icon: IconFileDescription,
+      },
+    ],
+  }
+
+  const siteName = currentSite === "appfirmsec" ? "AppFirmSec" : "EnnieBoatEng";
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -104,14 +150,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link href="/dashboard">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Admin Dashboard</span>
+                <span className="text-base font-semibold">{siteName} Admin</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMain} />
         <NavDocuments items={data.documents} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
