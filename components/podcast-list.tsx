@@ -280,7 +280,24 @@ export function PodcastList() {
                           variant="ghost" 
                           size="sm" 
                           onClick={() => { 
-                            setEditingPodcast(podcast); 
+                            setEditingPodcast({
+                              title: podcast.title,
+                              slug: podcast.slug,
+                              description: podcast.description,
+                              content: podcast.content,
+                              status: podcast.status,
+                              author: podcast.author,
+                              tags: podcast.tags || [],
+                              audioFile: podcast.audioUrl ?? "",
+                              duration: podcast.duration,
+                              fileSize: podcast.fileSize,
+                              publishDate: podcast.publishedAt ?? "",
+                              seoTitle: podcast.seoTitle,
+                              seoDescription: podcast.seoDescription,
+                              seoKeywords: podcast.seoKeywords,
+                              episodeNumber: podcast.episodeNumber,
+                              seasonNumber: podcast.seasonNumber,
+                            }); 
                             setShowEditModal(true); 
                           }}
                         >

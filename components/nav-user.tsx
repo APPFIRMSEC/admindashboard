@@ -1,7 +1,6 @@
 "use client"
 
 import {
-  IconCreditCard,
   IconDotsVertical,
   IconLogout,
   IconNotification,
@@ -45,7 +44,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { currentSite, setCurrentSite } = useSiteContext()
-  const { theme, setTheme } = useTheme()
+  const { setTheme } = useTheme()
 
   const sites = [
     { id: "appfirmsec", name: "AppFirmSec", description: "Full features" },

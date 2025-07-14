@@ -19,8 +19,6 @@ import {
   Save, 
   Tag,
   X,
-  Upload,
-  Play,
   Clock,
   FileAudio
 } from "lucide-react";

@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { IconDeviceFloppy, IconEdit, IconEye, IconTrash, IconPlus } from "@tabler/icons-react"
-import { useSiteContext } from "@/contexts/site-context"
+import { IconDeviceFloppy, IconTrash, IconPlus } from "@tabler/icons-react"
 
 interface Insight {
   id: string
@@ -26,7 +25,6 @@ interface Podcast {
 }
 
 export function EditHomePage() {
-  const { currentSite } = useSiteContext()
   const [heroTitle, setHeroTitle] = useState("AppFirmSec:")
   const [heroSubtitle, setHeroSubtitle] = useState("Your Technology Knowledge Hub")
   const [heroDescription, setHeroDescription] = useState("Explore the latest in cybersecurity trends, threats, and best practices")
