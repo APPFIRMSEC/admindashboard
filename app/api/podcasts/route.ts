@@ -40,6 +40,13 @@ export async function POST(req: Request) {
         fileSize: data.fileSize,
         publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
         authorId: session.user.id,
+        seasonNumber: data.seasonNumber,
+        episodeNumber: data.episodeNumber,
+        seoTitle: data.seoTitle,
+        seoDescription: data.seoDescription,
+        seoKeywords: data.seoKeywords,
+        tags: Array.isArray(data.tags) ? data.tags.join(",") : data.tags,
+        content: data.content,
       },
     });
     return NextResponse.json(podcast, { status: 201 });

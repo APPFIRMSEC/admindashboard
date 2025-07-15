@@ -91,14 +91,19 @@ model Podcast {
   publishedAt DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  
-  // Analytics
-  downloads Int @default(0)
-  
-  // Relations
-  author   User   @relation(fields: [authorId], references: [id])
-  authorId String
-  
+  downloads   Int           @default(0)
+  author      User          @relation(fields: [authorId], references: [id])
+  authorId    String
+
+  // Added fields for frontend compatibility
+  seasonNumber  String?
+  episodeNumber String?
+  seoTitle      String?
+  seoDescription String?
+  seoKeywords   String?
+  tags          String?
+  content       String?
+
   @@map("podcasts")
 }
 

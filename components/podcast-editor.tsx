@@ -13,23 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Save, Tag, X, Clock, FileAudio } from "lucide-react";
+import { Save, Tag, X } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
-import { createPodcast } from "@/lib/utils";
+import { createPodcast, updatePodcast } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRef } from "react";
 import type { PodcastCreatePayload } from "@/lib/utils";
 import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
 
 export type PodcastFormData = {
+  id?: string | number;
   title: string;
   description: string;
   content: string;
@@ -54,11 +48,12 @@ export function PodcastEditor({
   onSave?: () => void;
 }) {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PodcastFormData>({
+    id: undefined,
     title: "",
     description: "",
     content: "",
-    status: "draft",
+    status: "DRAFT",
     tags: [] as string[],
     audioFile: "",
     duration: "",
@@ -83,11 +78,34 @@ export function PodcastEditor({
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         ...initialData,
-        tags: initialData.tags || [],
-      });
+        status:
+          initialData.status && initialData.status !== ""
+            ? initialData.status.toString().toUpperCase().trim()
+            : prev.status,
+        seasonNumber: initialData.seasonNumber
+          ? String(initialData.seasonNumber)
+          : "",
+        episodeNumber: initialData.episodeNumber
+          ? String(initialData.episodeNumber)
+          : "",
+        seoTitle: initialData.seoTitle ? String(initialData.seoTitle) : "",
+        seoDescription: initialData.seoDescription
+          ? String(initialData.seoDescription)
+          : "",
+        seoKeywords: initialData.seoKeywords
+          ? String(initialData.seoKeywords)
+          : "",
+        tags: Array.isArray(initialData.tags)
+          ? initialData.tags
+          : initialData.tags
+          ? String(initialData.tags).split(",")
+          : [],
+        content: initialData.content ? String(initialData.content) : "",
+        publishDate: initialData.publishDate || "",
+      }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
@@ -243,15 +261,23 @@ export function PodcastEditor({
     }
 
     // Prepare podcast data, ensure status is uppercase
-    const podcastPayload: PodcastCreatePayload = {
-      ...formData,
+    const { publishDate, ...restFormData } = formData;
+    const podcastPayload: PodcastCreatePayload & { publishedAt?: string } = {
+      ...restFormData,
       audioUrl,
       fileSize,
       duration,
       status: formData.status.toUpperCase(),
+      publishedAt: publishDate ? publishDate : undefined,
     };
 
-    const result = await createPodcast(podcastPayload);
+    let result;
+    // If editing (initialData && initialData.id), PATCH; else, POST
+    if (initialData && initialData.id) {
+      result = await updatePodcast(initialData.id, podcastPayload);
+    } else {
+      result = await createPodcast(podcastPayload);
+    }
     if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
     if ("error" in result) {
       toast(
@@ -300,6 +326,7 @@ export function PodcastEditor({
       }));
     }
   };
+  console.log("publishDate for input:", formData);
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
@@ -399,43 +426,47 @@ export function PodcastEditor({
               <CardDescription>Upload your podcast audio file</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="audioFile">Audio File</Label>
-                <div className="flex items-center gap-2">
+              {initialData && initialData.id ? (
+                // In edit mode: show audio file as disabled input or audio player
+                formData.audioFile ? (
+                  <div>
+                    <Label>Current Audio File</Label>
+                    <audio
+                      controls
+                      src={formData.audioFile}
+                      className="w-full mb-2"
+                    />
+                    <Input
+                      value={formData.audioFile}
+                      disabled
+                      readOnly
+                      className="mb-2"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">
+                    No audio file attached.
+                  </div>
+                )
+              ) : (
+                // In create mode: show file input
+                <div className="space-y-2">
+                  <Label htmlFor="audioFile">Audio File</Label>
                   <Input
                     id="audioFile"
                     type="file"
                     accept="audio/*"
                     onChange={handleAudioFileChange}
-                    className="flex-1"
+                    disabled={isLoading}
                   />
-                  <FileAudio className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              {audioPreview && (
-                <div className="space-y-2">
-                  <Label>Audio Preview</Label>
-                  <div className="border rounded-lg p-4 bg-muted/50">
+                  {audioPreview && (
                     <audio
                       controls
-                      className="w-full"
+                      src={audioPreview}
+                      className="w-full mt-2"
                       onLoadedMetadata={handleAudioLoadedMetadata}
-                    >
-                      <source src={audioPreview} type="audio/mpeg" />
-                      Your browser does not support the audio element.
-                    </audio>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formData.duration || "Calculating..."}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FileAudio className="h-3 w-3" />
-                        {formData.fileSize || "Calculating..."}
-                      </div>
-                    </div>
-                  </div>
+                    />
+                  )}
                 </div>
               )}
             </CardContent>
@@ -474,19 +505,17 @@ export function PodcastEditor({
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select
+                <select
+                  id="status"
                   value={formData.status}
-                  onValueChange={(value) => handleInputChange("status", value)}
+                  onChange={(e) => handleInputChange("status", e.target.value)}
+                  className="w-full border rounded px-2 py-1"
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="scheduled">Scheduled</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <option value="DRAFT">Draft</option>
+                  <option value="SCHEDULED">Scheduled</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
               </div>
 
               <div className="space-y-2">

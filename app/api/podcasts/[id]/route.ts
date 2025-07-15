@@ -31,15 +31,12 @@ export async function GET(
 }
 
 // PATCH /api/podcasts/[id] - Update a podcast
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, context: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { id } = params;
+  const { id } = await context.params;
   const data = await req.json();
   try {
     const podcast = await db.podcast.update({
@@ -52,6 +49,13 @@ export async function PATCH(
         duration: data.duration,
         fileSize: data.fileSize,
         publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
+        seasonNumber: data.seasonNumber,
+        episodeNumber: data.episodeNumber,
+        seoTitle: data.seoTitle,
+        seoDescription: data.seoDescription,
+        seoKeywords: data.seoKeywords,
+        tags: Array.isArray(data.tags) ? data.tags.join(",") : data.tags,
+        content: data.content,
       },
     });
     return NextResponse.json(podcast);

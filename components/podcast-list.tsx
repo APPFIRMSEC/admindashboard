@@ -326,21 +326,40 @@ export function PodcastList() {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
+                            console.log(
+                              "Editing podcast status:",
+                              podcast.status
+                            );
                             setEditingPodcast({
-                              title: podcast.title,
-                              description: podcast.description,
-                              content: podcast.content,
-                              status: podcast.status,
+                              id: podcast.id,
+                              title: podcast.title ?? "",
+                              description: podcast.description ?? "",
+                              content: podcast.content ?? "",
+                              status: podcast.status
+                                ? podcast.status.toString().toUpperCase().trim()
+                                : "DRAFT",
                               tags: podcast.tags || [],
                               audioFile: podcast.audioUrl ?? "",
-                              duration: podcast.duration ?? "",
-                              fileSize: podcast.fileSize ?? "",
-                              publishDate: podcast.publishedAt ?? "",
+                              duration: podcast.duration
+                                ? String(podcast.duration)
+                                : "",
+                              fileSize: podcast.fileSize
+                                ? String(podcast.fileSize)
+                                : "",
+                              publishDate: podcast.publishedAt
+                                ? new Date(podcast.publishedAt)
+                                    .toISOString()
+                                    .slice(0, 16)
+                                : "",
                               seoTitle: podcast.seoTitle ?? "",
                               seoDescription: podcast.seoDescription ?? "",
                               seoKeywords: podcast.seoKeywords ?? "",
-                              episodeNumber: podcast.episodeNumber ?? "",
-                              seasonNumber: podcast.seasonNumber ?? "",
+                              episodeNumber: podcast.episodeNumber
+                                ? String(podcast.episodeNumber)
+                                : "",
+                              seasonNumber: podcast.seasonNumber
+                                ? String(podcast.seasonNumber)
+                                : "",
                             });
                             setShowEditModal(true);
                           }}

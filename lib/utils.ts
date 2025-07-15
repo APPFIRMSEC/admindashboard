@@ -50,7 +50,7 @@ export type PodcastCreatePayload = {
   audioFile: string;
   duration: string;
   fileSize: string;
-  publishDate: string;
+  publishDate?: string;
   seoTitle: string;
   seoDescription: string;
   seoKeywords: string;
@@ -85,6 +85,24 @@ export async function deletePodcast(
 ): Promise<{ message?: string; error?: string }> {
   const res = await fetch(`/api/podcasts/${id}`, {
     method: "DELETE",
+  });
+  return res.json();
+}
+
+/**
+ * Updates an existing podcast by PATCHing to the backend API.
+ * @param id The podcast ID
+ * @param data The updated podcast data
+ * @returns The updated podcast object or an error object
+ */
+export async function updatePodcast(
+  id: string | number,
+  data: Partial<PodcastCreatePayload>
+): Promise<Podcast | { error: string }> {
+  const res = await fetch(`/api/podcasts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
   return res.json();
 }
