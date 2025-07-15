@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 // GET /api/podcasts/[id] - Get a podcast by ID
 export async function GET(
@@ -74,6 +75,19 @@ export async function DELETE(
   }
   const { id } = params;
   try {
+    // Find the podcast to get the audioUrl
+    const podcast = await db.podcast.findUnique({ where: { id } });
+    if (!podcast) {
+      return NextResponse.json({ error: "Podcast not found" }, { status: 404 });
+    }
+    // Delete audio file from Supabase Storage if it exists
+    if (podcast.audioUrl) {
+      // Extract the storage key from the audioUrl
+      const match = podcast.audioUrl.match(/podcasts-audio\/(.+)$/);
+      if (match && match[1]) {
+        await supabase.storage.from("podcasts-audio").remove([match[1]]);
+      }
+    }
     await db.podcast.delete({ where: { id } });
     return NextResponse.json({ message: "Podcast deleted successfully" });
   } catch (error) {

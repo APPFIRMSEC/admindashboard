@@ -49,10 +49,11 @@ import {
 } from "@/components/ui/sheet";
 import { PodcastEditor } from "@/components/podcast-editor";
 import type { PodcastFormData } from "@/components/podcast-editor";
-import { fetchPodcasts } from "@/lib/utils";
+import { fetchPodcasts, deletePodcast } from "@/lib/utils";
 import type { Podcast } from "@/lib/utils";
 import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
 import { useRef } from "react";
+import { toast } from "sonner";
 
 export function PodcastList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -73,6 +74,9 @@ export function PodcastList() {
     left: number;
   } | null>(null);
   const refreshKey = usePodcastRefreshStore((state) => state.refreshKey);
+  const incrementRefreshKey = usePodcastRefreshStore(
+    (state) => state.incrementRefreshKey
+  );
 
   useEffect(() => {
     async function loadPodcasts() {
@@ -146,6 +150,16 @@ export function PodcastList() {
           left,
         });
       }
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    const res = await deletePodcast(id);
+    if (res.error) {
+      toast.error("Failed to delete podcast: " + res.error);
+    } else {
+      toast.success("Podcast deleted successfully!");
+      incrementRefreshKey();
     }
   };
 
@@ -333,7 +347,11 @@ export function PodcastList() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(podcast.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

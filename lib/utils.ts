@@ -74,3 +74,17 @@ export async function createPodcast(
   });
   return res.json();
 }
+
+/**
+ * Deletes a podcast by ID via the backend API.
+ * @param id The podcast ID
+ * @returns The response JSON
+ */
+export async function deletePodcast(
+  id: string | number
+): Promise<{ message?: string; error?: string }> {
+  const res = await fetch(`/api/podcasts/${id}`, {
+    method: "DELETE",
+  });
+  return res.json();
+}
