@@ -1,153 +1,176 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   Play,
   Calendar,
   User,
   Clock,
-  Download
+  Download,
+  Pause,
 } from "lucide-react";
 import Link from "next/link";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetClose,
+} from "@/components/ui/sheet";
 import { PodcastEditor } from "@/components/podcast-editor";
 import type { PodcastFormData } from "@/components/podcast-editor";
+import { fetchPodcasts, deletePodcast } from "@/lib/utils";
+import type { Podcast } from "@/lib/utils";
+import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
+import { useRef } from "react";
+import { toast } from "sonner";
 
 export function PodcastList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingPodcast, setEditingPodcast] = useState<PodcastFormData | null>(null);
+  const [editingPodcast, setEditingPodcast] = useState<PodcastFormData | null>(
+    null
+  );
+  const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const [playingPodcastId, setPlayingPodcastId] = useState<
+    string | number | null
+  >(null);
+  const playButtonRefs = useRef<
+    Record<string | number, HTMLButtonElement | null>
+  >({});
+  const [popoverPosition, setPopoverPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const refreshKey = usePodcastRefreshStore((state) => state.refreshKey);
+  const incrementRefreshKey = usePodcastRefreshStore(
+    (state) => state.incrementRefreshKey
+  );
 
-  // Mock data - in a real app, this would come from your API
-  const podcasts = [
-    {
-      id: 1,
-      title: "Episode 23: Web Development Trends 2024",
-      description: "Exploring the latest trends in web development and what's coming next.",
-      status: "published",
-      author: "Jane Smith",
-      publishedAt: "2024-01-15",
-      duration: "45:30",
-      fileSize: "32.5 MB",
-      downloads: 1234,
-      audioUrl: "/podcasts/episode-23.mp3",
-      slug: "episode-23-web-development-trends",
-      content: "Show notes for episode 23...",
-      tags: ["web development", "trends", "2024"],
-      seoTitle: "Web Development Trends 2024 - Episode 23",
-      seoDescription: "Exploring the latest trends in web development and what's coming next.",
-      seoKeywords: "web development, trends, 2024, programming",
-      episodeNumber: "23",
-      seasonNumber: "1"
-    },
-    {
-      id: 2,
-      title: "Episode 22: Building Scalable APIs",
-      description: "Best practices for designing and building scalable REST APIs.",
-      status: "published",
-      author: "Mike Johnson",
-      publishedAt: "2024-01-08",
-      duration: "38:15",
-      fileSize: "28.1 MB",
-      downloads: 987,
-      audioUrl: "/podcasts/episode-22.mp3",
-      slug: "episode-22-building-scalable-apis",
-      content: "Show notes for episode 22...",
-      tags: ["api", "scalable", "rest"],
-      seoTitle: "Building Scalable APIs - Episode 22",
-      seoDescription: "Best practices for designing and building scalable REST APIs.",
-      seoKeywords: "api, scalable, rest, programming",
-      episodeNumber: "22",
-      seasonNumber: "1"
-    },
-    {
-      id: 3,
-      title: "Episode 24: The Future of AI in Development",
-      description: "How AI is transforming the software development landscape.",
-      status: "draft",
-      author: "Sarah Wilson",
-      publishedAt: null,
-      duration: "52:45",
-      fileSize: "0 MB",
-      downloads: 0,
-      audioUrl: null,
-      slug: "episode-24-future-ai-development",
-      content: "Show notes for episode 24...",
-      tags: ["ai", "development", "future"],
-      seoTitle: "The Future of AI in Development - Episode 24",
-      seoDescription: "How AI is transforming the software development landscape.",
-      seoKeywords: "ai, development, future, programming",
-      episodeNumber: "24",
-      seasonNumber: "1"
-    },
-    {
-      id: 4,
-      title: "Episode 25: DevOps Best Practices",
-      description: "Essential DevOps practices for modern development teams.",
-      status: "scheduled",
-      author: "John Doe",
-      publishedAt: "2024-01-22",
-      duration: "41:20",
-      fileSize: "29.8 MB",
-      downloads: 0,
-      audioUrl: "/podcasts/episode-25.mp3",
-      slug: "episode-25-devops-best-practices",
-      content: "Show notes for episode 25...",
-      tags: ["devops", "best practices", "development"],
-      seoTitle: "DevOps Best Practices - Episode 25",
-      seoDescription: "Essential DevOps practices for modern development teams.",
-      seoKeywords: "devops, best practices, development, teams",
-      episodeNumber: "25",
-      seasonNumber: "1"
+  useEffect(() => {
+    async function loadPodcasts() {
+      const result = await fetchPodcasts();
+      if (Array.isArray(result)) {
+        setPodcasts(result);
+      }
     }
-  ];
+    loadPodcasts();
+
+    // Refetch podcasts when the page/tab becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadPodcasts();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshKey]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      published: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-      draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-      scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+      published:
+        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+      draft:
+        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+      scheduled:
+        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
     };
-    return <Badge className={variants[status as keyof typeof variants]}>{status}</Badge>;
+    return (
+      <Badge
+        className={
+          variants[status.toLowerCase() as keyof typeof variants] ?? ""
+        }
+      >
+        {status.toLowerCase()}
+      </Badge>
+    );
   };
 
-  const filteredPodcasts = podcasts.filter(podcast => {
-    const matchesSearch = podcast.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         podcast.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || podcast.status === statusFilter;
+  const filteredPodcasts = podcasts.filter((podcast) => {
+    const matchesSearch =
+      podcast.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      podcast.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || podcast.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handlePlayClick = (podcast: Podcast) => {
+    if (playingPodcastId === podcast.id) {
+      setPlayingPodcastId(null);
+      setPopoverPosition(null);
+    } else {
+      setPlayingPodcastId(podcast.id);
+      // Position the popover below the play button
+      const btn = playButtonRefs.current[podcast.id];
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        const popoverWidth = 240; // px, matches minWidth below
+        const spaceRight = window.innerWidth - rect.left;
+        let left = rect.left + window.scrollX;
+        // If not enough space to the right, open to the left
+        if (spaceRight < popoverWidth + 16) {
+          left = rect.right + window.scrollX - popoverWidth;
+        }
+        setPopoverPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left,
+        });
+      }
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    const res = await deletePodcast(id);
+    if (res.error) {
+      toast.error("Failed to delete podcast: " + res.error);
+    } else {
+      toast.success("Podcast deleted successfully!");
+      incrementRefreshKey();
+    }
+  };
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Podcast Episodes</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Podcast Episodes
+          </h1>
           <p className="text-muted-foreground">
             Manage your podcast episodes and audio content
           </p>
@@ -164,7 +187,9 @@ export function PodcastList() {
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
-          <CardDescription>Search and filter your podcast episodes</CardDescription>
+          <CardDescription>
+            Search and filter your podcast episodes
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4 sm:flex-row">
@@ -207,10 +232,16 @@ export function PodcastList() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead className="hidden md:table-cell">Author</TableHead>
-                  <TableHead className="hidden lg:table-cell">Duration</TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Duration
+                  </TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Published</TableHead>
-                  <TableHead className="hidden lg:table-cell">Downloads</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Published
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Downloads
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -226,7 +257,7 @@ export function PodcastList() {
                         <div className="flex items-center gap-4 text-xs text-muted-foreground md:hidden">
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {podcast.author}
+                            {podcast.author?.name}
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
@@ -242,7 +273,7 @@ export function PodcastList() {
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
-                        {podcast.author}
+                        {podcast.author?.name}
                       </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
@@ -251,9 +282,7 @@ export function PodcastList() {
                         {podcast.duration}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {getStatusBadge(podcast.status)}
-                    </TableCell>
+                    <TableCell>{getStatusBadge(podcast.status)}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -262,48 +291,86 @@ export function PodcastList() {
                             {new Date(podcast.publishedAt).toLocaleDateString()}
                           </span>
                         ) : (
-                          <span className="text-sm text-muted-foreground">Not published</span>
+                          <span className="text-sm text-muted-foreground">
+                            Not published
+                          </span>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <span className="text-sm font-medium">{podcast.downloads.toLocaleString()}</span>
+                      <span className="text-sm font-medium">
+                        {podcast.downloads.toLocaleString()}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         {podcast.audioUrl && (
-                          <Button variant="ghost" size="sm">
-                            <Play className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              ref={(el) => {
+                                playButtonRefs.current[podcast.id] = el;
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePlayClick(podcast)}
+                            >
+                              {playingPodcastId === podcast.id ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
                         )}
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => { 
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            console.log(
+                              "Editing podcast status:",
+                              podcast.status
+                            );
                             setEditingPodcast({
-                              title: podcast.title,
-                              slug: podcast.slug,
-                              description: podcast.description,
-                              content: podcast.content,
-                              status: podcast.status,
-                              author: podcast.author,
+                              id: podcast.id,
+                              title: podcast.title ?? "",
+                              description: podcast.description ?? "",
+                              content: podcast.content ?? "",
+                              status: podcast.status
+                                ? podcast.status.toString().toUpperCase().trim()
+                                : "DRAFT",
                               tags: podcast.tags || [],
                               audioFile: podcast.audioUrl ?? "",
-                              duration: podcast.duration,
-                              fileSize: podcast.fileSize,
-                              publishDate: podcast.publishedAt ?? "",
-                              seoTitle: podcast.seoTitle,
-                              seoDescription: podcast.seoDescription,
-                              seoKeywords: podcast.seoKeywords,
-                              episodeNumber: podcast.episodeNumber,
-                              seasonNumber: podcast.seasonNumber,
-                            }); 
-                            setShowEditModal(true); 
+                              duration: podcast.duration
+                                ? String(podcast.duration)
+                                : "",
+                              fileSize: podcast.fileSize
+                                ? String(podcast.fileSize)
+                                : "",
+                              publishDate: podcast.publishedAt
+                                ? new Date(podcast.publishedAt)
+                                    .toISOString()
+                                    .slice(0, 16)
+                                : "",
+                              seoTitle: podcast.seoTitle ?? "",
+                              seoDescription: podcast.seoDescription ?? "",
+                              seoKeywords: podcast.seoKeywords ?? "",
+                              episodeNumber: podcast.episodeNumber
+                                ? String(podcast.episodeNumber)
+                                : "",
+                              seasonNumber: podcast.seasonNumber
+                                ? String(podcast.seasonNumber)
+                                : "",
+                            });
+                            setShowEditModal(true);
                           }}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(podcast.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -312,14 +379,53 @@ export function PodcastList() {
                 ))}
               </TableBody>
             </Table>
+            {/* Popover for audio player */}
+            {playingPodcastId && popoverPosition && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: popoverPosition.top,
+                  left: popoverPosition.left,
+                  zIndex: 1000,
+                  background: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  padding: 12,
+                  minWidth: 240,
+                }}
+              >
+                <audio
+                  controls
+                  autoPlay
+                  src={
+                    filteredPodcasts.find((p) => p.id === playingPodcastId)
+                      ?.audioUrl ?? undefined
+                  }
+                  className="w-full"
+                />
+                <div className="flex justify-end mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setPlayingPodcastId(null);
+                      setPopoverPosition(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Podcast Edit Modal */}
       <Sheet open={showEditModal} onOpenChange={setShowEditModal}>
-        <SheetContent 
-          side="top" 
+        <SheetContent
+          side="top"
           className="w-full h-full max-h-[90vh] overflow-y-auto p-0"
         >
           <div className="w-full h-full overflow-y-auto px-4 py-4 sm:px-6">
@@ -327,14 +433,16 @@ export function PodcastList() {
               <SheetTitle>Edit Podcast Episode</SheetTitle>
             </SheetHeader>
             {editingPodcast && (
-              <PodcastEditor 
-                initialData={editingPodcast} 
-                onSave={() => setShowEditModal(false)} 
+              <PodcastEditor
+                initialData={editingPodcast}
+                onSave={() => setShowEditModal(false)}
               />
             )}
             <SheetFooter className="flex gap-2 justify-end mt-6">
               <SheetClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
               </SheetClose>
             </SheetFooter>
           </div>
@@ -342,4 +450,4 @@ export function PodcastList() {
       </Sheet>
     </div>
   );
-} 
+}
