@@ -50,6 +50,7 @@ import { PodcastEditor } from "@/components/podcast-editor";
 import type { PodcastFormData } from "@/components/podcast-editor";
 import { fetchPodcasts } from "@/lib/utils";
 import type { Podcast } from "@/lib/utils";
+import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
 
 export function PodcastList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,6 +60,7 @@ export function PodcastList() {
     null
   );
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const refreshKey = usePodcastRefreshStore((state) => state.refreshKey);
 
   useEffect(() => {
     async function loadPodcasts() {
@@ -68,7 +70,18 @@ export function PodcastList() {
       }
     }
     loadPodcasts();
-  }, []);
+
+    // Refetch podcasts when the page/tab becomes visible
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadPodcasts();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [refreshKey]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -254,7 +267,6 @@ export function PodcastList() {
                               description: podcast.description,
                               content: podcast.content,
                               status: podcast.status,
-                              author: podcast.author?.name ?? "",
                               tags: podcast.tags || [],
                               audioFile: podcast.audioUrl ?? "",
                               duration: podcast.duration ?? "",

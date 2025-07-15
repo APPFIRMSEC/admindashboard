@@ -26,14 +26,14 @@ import { supabaseBrowser } from "@/lib/supabase-browser";
 import { createPodcast } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRef } from "react";
+import type { PodcastCreatePayload } from "@/lib/utils";
+import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
 
 export type PodcastFormData = {
   title: string;
-  slug: string;
   description: string;
   content: string;
   status: string;
-  author: string;
   tags: string[];
   audioFile: string;
   duration: string;
@@ -77,6 +77,9 @@ export function PodcastEditor({
   const [success, setSuccess] = useState<string | null>(null);
   const progressRef = useRef<number>(0);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const incrementRefreshKey = usePodcastRefreshStore(
+    (state) => state.incrementRefreshKey
+  );
 
   useEffect(() => {
     if (initialData) {
@@ -149,7 +152,7 @@ export function PodcastEditor({
     // Simulated progress bar
     progressRef.current = 0;
     let progress = 0;
-    const toastId = toast(
+    toast(
       <div>
         <div>Uploading and saving podcast...</div>
         <div className="w-full bg-gray-200 rounded h-2 mt-2">
@@ -196,7 +199,7 @@ export function PodcastEditor({
 
     let audioUrl = formData.audioFile;
     let fileSize = formData.fileSize;
-    let duration = formData.duration;
+    const duration = formData.duration;
 
     // If audioFile is a local object URL, upload the file directly to Supabase
     const fileInput = document.getElementById(
@@ -205,7 +208,7 @@ export function PodcastEditor({
     const file = fileInput?.files?.[0];
     if (file) {
       const filename = `${Date.now()}-${file.name}`;
-      const { data, error: uploadError } = await supabaseBrowser.storage
+      const { error: uploadError } = await supabaseBrowser.storage
         .from("podcasts-audio")
         .upload(filename, file, {
           cacheControl: "3600",
@@ -231,16 +234,16 @@ export function PodcastEditor({
         return;
       }
       // Get the public URL
-      const { data: publicUrlData } = supabaseBrowser.storage
+      const publicUrlData = supabaseBrowser.storage
         .from("podcasts-audio")
-        .getPublicUrl(filename);
+        .getPublicUrl(filename).data;
       audioUrl = publicUrlData.publicUrl;
       fileSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
       // Duration will be set from formData or can be calculated from audio element
     }
 
     // Prepare podcast data, ensure status is uppercase
-    const podcastData = {
+    const podcastPayload: PodcastCreatePayload = {
       ...formData,
       audioUrl,
       fileSize,
@@ -248,9 +251,9 @@ export function PodcastEditor({
       status: formData.status.toUpperCase(),
     };
 
-    const result = await createPodcast(podcastData);
+    const result = await createPodcast(podcastPayload);
     if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-    if (result.error) {
+    if ("error" in result) {
       toast(
         <div>
           <div className="text-red-600">
@@ -279,14 +282,7 @@ export function PodcastEditor({
       </div>,
       { id: "podcast-upload-progress", duration: 3000 }
     );
-  };
-
-  const generateSlug = () => {
-    const slug = formData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-    setFormData((prev) => ({ ...prev, slug }));
+    incrementRefreshKey();
   };
 
   const handleAudioLoadedMetadata = (
