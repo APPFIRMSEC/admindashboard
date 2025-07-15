@@ -7,9 +7,9 @@ import { supabase } from "@/lib/supabase";
 // GET /api/podcasts/[id] - Get a podcast by ID
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const podcast = await db.podcast.findUnique({
       where: { id },
@@ -31,7 +31,10 @@ export async function GET(
 }
 
 // PATCH /api/podcasts/[id] - Update a podcast
-export async function PATCH(req: Request, context: { params: { id: string } }) {
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -49,6 +52,7 @@ export async function PATCH(req: Request, context: { params: { id: string } }) {
         duration: data.duration,
         fileSize: data.fileSize,
         publishedAt: data.publishedAt ? new Date(data.publishedAt) : undefined,
+        // The following fields are all optional String fields in the schema
         seasonNumber: data.seasonNumber,
         episodeNumber: data.episodeNumber,
         seoTitle: data.seoTitle,
@@ -71,13 +75,13 @@ export async function PATCH(req: Request, context: { params: { id: string } }) {
 // DELETE /api/podcasts/[id] - Delete a podcast
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { id } = params;
+  const { id } = await context.params;
   try {
     // Find the podcast to get the audioUrl
     const podcast = await db.podcast.findUnique({ where: { id } });

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const filename = `${Date.now()}-${(file as File).name}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const uploadResult = await supabase.storage
       .from("podcasts-audio")
       .upload(filename, file, {
         cacheControl: "3600",
@@ -23,8 +23,11 @@ export async function POST(req: NextRequest) {
         contentType: (file as File).type,
       });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (uploadResult.error) {
+      return NextResponse.json(
+        { error: uploadResult.error.message },
+        { status: 500 }
+      );
     }
 
     // Get the public URL
@@ -33,7 +36,7 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(filename);
 
     return NextResponse.json({ url: publicUrlData.publicUrl, key: filename });
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

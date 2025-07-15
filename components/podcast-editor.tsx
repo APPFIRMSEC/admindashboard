@@ -107,7 +107,6 @@ export function PodcastEditor({
         publishDate: initialData.publishDate || "",
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   // Add navigation prevention effect
