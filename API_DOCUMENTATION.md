@@ -553,3 +553,86 @@ Example curl command:
 curl -X GET "http://localhost:3000/api/users" \
   -H "Authorization: Bearer <session_token>"
 ```
+
+---
+
+# Podcasts API Documentation
+
+## Endpoints
+
+### List Podcasts
+
+- **GET** `/api/podcasts`
+- **Response:**
+
+```json
+{
+  "podcasts": [
+    {
+      "id": 1,
+      "title": "Episode Title",
+      "description": "...",
+      "status": "PUBLISHED",
+      "audioUrl": "https://...",
+      "duration": "45:30",
+      "fileSize": "32.5 MB",
+      "publishedAt": "2024-01-15T00:00:00.000Z",
+      "downloads": 1234,
+      "author": { "id": "...", "name": "Jane Smith", ... },
+      ...
+    }
+  ]
+}
+```
+
+### Create Podcast
+
+- **POST** `/api/podcasts`
+- **Body:**
+
+```json
+{
+  "title": "Episode Title",
+  "description": "...",
+  "status": "PUBLISHED",
+  "audioUrl": "https://...",
+  "duration": "45:30",
+  "fileSize": "32.5 MB",
+  "publishedAt": "2024-01-15T00:00:00.000Z",
+  ...
+}
+```
+
+- **Response:**
+  - Created podcast object or `{ error: string }`
+
+## Audio Upload Flow (Direct-to-Supabase)
+
+- The frontend uploads audio files directly to Supabase Storage using the anon key.
+- After upload, the public URL is included in the podcast creation request.
+- No backend API is used for file upload, only for podcast record creation.
+
+### Example (Frontend)
+
+```js
+const { data, error } = await supabase.storage
+  .from("podcasts-audio")
+  .upload(filename, file, { contentType: file.type });
+```
+
+## Storage Security: Restricting Uploads in Production
+
+**For production, restrict uploads to authenticated users only.**
+
+### Example SQL Policy
+
+```sql
+create policy "Allow authenticated uploads to podcasts-audio"
+on storage.objects
+for insert
+to authenticated
+with check (bucket_id = 'podcasts-audio');
+```
+
+- This allows only signed-in users to upload files to the `podcasts-audio` bucket.
+- Remove or disable any public (anon) upload policies before going live.

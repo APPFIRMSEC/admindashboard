@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -15,13 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Save, 
-  Tag,
-  X,
-  Clock,
-  FileAudio
-} from "lucide-react";
+import { Save, Tag, X, Clock, FileAudio } from "lucide-react";
+import { supabaseBrowser } from "@/lib/supabase-browser";
+import { createPodcast } from "@/lib/utils";
 
 export type PodcastFormData = {
   title: string;
@@ -42,7 +44,13 @@ export type PodcastFormData = {
   seasonNumber: string;
 };
 
-export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<PodcastFormData>, onSave?: () => void }) {
+export function PodcastEditor({
+  initialData,
+  onSave,
+}: {
+  initialData?: Partial<PodcastFormData>;
+  onSave?: () => void;
+}) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
@@ -60,11 +68,13 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
     seoDescription: "",
     seoKeywords: "",
     episodeNumber: "",
-    seasonNumber: ""
+    seasonNumber: "",
   });
   const [newTag, setNewTag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [audioPreview, setAudioPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -78,7 +88,7 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
   }, [initialData]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   // Handle audio file selection and preview
@@ -86,10 +96,10 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
-      setFormData(prev => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         audioFile: url,
-        fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
       }));
       setAudioPreview(url);
     }
@@ -97,31 +107,75 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
 
   const handleAddTag = () => {
     if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, newTag.trim()]
+        tags: [...prev.tags, newTag.trim()],
       }));
       setNewTag("");
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
+    setSuccess(null);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    let audioUrl = formData.audioFile;
+    let fileSize = formData.fileSize;
+    let duration = formData.duration;
 
-    // In a real app, you'd save to your backend here
-    console.log("Saving podcast episode:", formData);
-    
+    // If audioFile is a local object URL, upload the file directly to Supabase
+    const fileInput = document.getElementById(
+      "audioFile"
+    ) as HTMLInputElement | null;
+    const file = fileInput?.files?.[0];
+    if (file) {
+      const filename = `${Date.now()}-${file.name}`;
+      const { data, error: uploadError } = await supabaseBrowser.storage
+        .from("podcasts-audio")
+        .upload(filename, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        });
+      if (uploadError) {
+        setError("Audio upload failed: " + uploadError.message);
+        setIsLoading(false);
+        return;
+      }
+      // Get the public URL
+      const { data: publicUrlData } = supabaseBrowser.storage
+        .from("podcasts-audio")
+        .getPublicUrl(filename);
+      audioUrl = publicUrlData.publicUrl;
+      fileSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+      // Duration will be set from formData or can be calculated from audio element
+    }
+
+    // Prepare podcast data, ensure status is uppercase
+    const podcastData = {
+      ...formData,
+      audioUrl,
+      fileSize,
+      duration,
+      status: formData.status.toUpperCase(),
+    };
+
+    const result = await createPodcast(podcastData);
+    if (result.error) {
+      setError("Podcast save failed: " + result.error);
+      setIsLoading(false);
+      return;
+    }
+    setSuccess("Podcast saved successfully!");
     setIsLoading(false);
     if (onSave) onSave();
     else router.push("/podcasts");
@@ -132,7 +186,7 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-    setFormData(prev => ({ ...prev, slug }));
+    setFormData((prev) => ({ ...prev, slug }));
   };
 
   return (
@@ -140,7 +194,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">New Podcast Episode</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            New Podcast Episode
+          </h1>
           <p className="text-muted-foreground">
             Create a new podcast episode for your website
           </p>
@@ -156,6 +212,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
         </div>
       </div>
 
+      {error && <div className="text-red-500">{error}</div>}
+      {success && <div className="text-green-600">{success}</div>}
+
       <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
@@ -163,7 +222,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
           <Card>
             <CardHeader>
               <CardTitle>Episode Details</CardTitle>
-              <CardDescription>Basic information about your podcast episode</CardDescription>
+              <CardDescription>
+                Basic information about your podcast episode
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -173,7 +234,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                     id="seasonNumber"
                     placeholder="1"
                     value={formData.seasonNumber}
-                    onChange={(e) => handleInputChange("seasonNumber", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("seasonNumber", e.target.value)
+                    }
                     type="number"
                   />
                 </div>
@@ -183,12 +246,14 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                     id="episodeNumber"
                     placeholder="23"
                     value={formData.episodeNumber}
-                    onChange={(e) => handleInputChange("episodeNumber", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("episodeNumber", e.target.value)
+                    }
                     type="number"
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
@@ -199,7 +264,7 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="slug">Slug</Label>
                 <div className="flex gap-2">
@@ -210,9 +275,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                     onChange={(e) => handleInputChange("slug", e.target.value)}
                     required
                   />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={generateSlug}
                     disabled={!formData.title}
                   >
@@ -227,7 +292,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                   id="description"
                   placeholder="A brief description of your podcast episode"
                   value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
                   rows={3}
                 />
               </div>
@@ -254,7 +321,7 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                   <FileAudio className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
-              
+
               {audioPreview && (
                 <div className="space-y-2">
                   <Label>Audio Preview</Label>
@@ -283,7 +350,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
           <Card>
             <CardHeader>
               <CardTitle>Show Notes</CardTitle>
-              <CardDescription>Write detailed show notes for your episode</CardDescription>
+              <CardDescription>
+                Write detailed show notes for your episode
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -303,12 +372,17 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
           <Card>
             <CardHeader>
               <CardTitle>Publishing</CardTitle>
-              <CardDescription>Control when and how your episode is published</CardDescription>
+              <CardDescription>
+                Control when and how your episode is published
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleInputChange("status", value)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -319,17 +393,19 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="publishDate">Publish Date</Label>
                 <Input
                   id="publishDate"
                   type="datetime-local"
                   value={formData.publishDate}
-                  onChange={(e) => handleInputChange("publishDate", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("publishDate", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="author">Author</Label>
                 <Input
@@ -346,7 +422,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
           <Card>
             <CardHeader>
               <CardTitle>Tags</CardTitle>
-              <CardDescription>Add tags to help categorize your episode</CardDescription>
+              <CardDescription>
+                Add tags to help categorize your episode
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
@@ -354,13 +432,15 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                   placeholder="Add a tag..."
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), handleAddTag())
+                  }
                 />
                 <Button type="button" variant="outline" onClick={handleAddTag}>
                   <Tag className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               {formData.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {formData.tags.map((tag) => (
@@ -384,7 +464,9 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
           <Card>
             <CardHeader>
               <CardTitle>SEO Settings</CardTitle>
-              <CardDescription>Optimize your episode for search engines</CardDescription>
+              <CardDescription>
+                Optimize your episode for search engines
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -393,28 +475,34 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
                   id="seoTitle"
                   placeholder="SEO optimized title"
                   value={formData.seoTitle}
-                  onChange={(e) => handleInputChange("seoTitle", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("seoTitle", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="seoDescription">SEO Description</Label>
                 <Textarea
                   id="seoDescription"
                   placeholder="SEO meta description"
                   value={formData.seoDescription}
-                  onChange={(e) => handleInputChange("seoDescription", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("seoDescription", e.target.value)
+                  }
                   rows={3}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="seoKeywords">SEO Keywords</Label>
                 <Input
                   id="seoKeywords"
                   placeholder="keyword1, keyword2, keyword3"
                   value={formData.seoKeywords}
-                  onChange={(e) => handleInputChange("seoKeywords", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("seoKeywords", e.target.value)
+                  }
                 />
               </div>
             </CardContent>
@@ -423,4 +511,4 @@ export function PodcastEditor({ initialData, onSave }: { initialData?: Partial<P
       </form>
     </div>
   );
-} 
+}

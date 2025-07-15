@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       data: {
         title: data.title,
         description: data.description,
-        status: data.status || "DRAFT",
+        status: data.status ? data.status.toUpperCase() : "DRAFT",
         audioUrl: data.audioUrl,
         duration: data.duration,
         fileSize: data.fileSize,
