@@ -24,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { Save, Tag, X, Clock, FileAudio } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { createPodcast } from "@/lib/utils";
+import { toast } from "sonner";
+import { useRef } from "react";
 
 export type PodcastFormData = {
   title: string;
@@ -73,6 +75,8 @@ export function PodcastEditor({
   const [audioPreview, setAudioPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const progressRef = useRef<number>(0);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -84,6 +88,22 @@ export function PodcastEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
+
+  // Add navigation prevention effect
+  useEffect(() => {
+    if (isLoading) {
+      window.onbeforeunload = (e) => {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      };
+    } else {
+      window.onbeforeunload = null;
+    }
+    return () => {
+      window.onbeforeunload = null;
+    };
+  }, [isLoading]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -126,6 +146,54 @@ export function PodcastEditor({
     setError(null);
     setSuccess(null);
 
+    // Simulated progress bar
+    progressRef.current = 0;
+    let progress = 0;
+    const toastId = toast(
+      <div>
+        <div>Uploading and saving podcast...</div>
+        <div className="w-full bg-gray-200 rounded h-2 mt-2">
+          <div
+            className="bg-blue-500 h-2 rounded"
+            style={{ width: `${progress}%`, transition: "width 0.3s" }}
+          />
+        </div>
+        {progress >= 90 && (
+          <div className="text-xs mt-1">Finalizing upload...</div>
+        )}
+      </div>,
+      { duration: Infinity, id: "podcast-upload-progress" }
+    );
+
+    // Progress simulation
+    function updateProgress() {
+      if (progress < 90) {
+        progress += 2;
+        progressRef.current = progress;
+        toast(
+          <div>
+            <div>Uploading and saving podcast...</div>
+            <div className="w-full bg-gray-200 rounded h-2 mt-2">
+              <div
+                className="bg-blue-500 h-2 rounded"
+                style={{ width: `${progress}%`, transition: "width 0.3s" }}
+              />
+            </div>
+            {progress >= 90 && (
+              <div className="text-xs mt-1">Finalizing upload...</div>
+            )}
+          </div>,
+          { duration: Infinity, id: "podcast-upload-progress" }
+        );
+        progressTimerRef.current = setTimeout(updateProgress, 200);
+      }
+    }
+    updateProgress();
+
+    // Immediately close the form/modal so the user can continue
+    if (onSave) onSave();
+    else router.push("/podcasts");
+
     let audioUrl = formData.audioFile;
     let fileSize = formData.fileSize;
     let duration = formData.duration;
@@ -145,8 +213,21 @@ export function PodcastEditor({
           contentType: file.type,
         });
       if (uploadError) {
-        setError("Audio upload failed: " + uploadError.message);
-        setIsLoading(false);
+        if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
+        toast(
+          <div>
+            <div className="text-red-600">
+              Audio upload failed: {uploadError.message}
+            </div>
+            <div className="w-full bg-gray-200 rounded h-2 mt-2">
+              <div
+                className="bg-red-500 h-2 rounded"
+                style={{ width: `100%`, transition: "width 0.3s" }}
+              />
+            </div>
+          </div>,
+          { id: "podcast-upload-progress", duration: 5000 }
+        );
         return;
       }
       // Get the public URL
@@ -168,15 +249,36 @@ export function PodcastEditor({
     };
 
     const result = await createPodcast(podcastData);
+    if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
     if (result.error) {
-      setError("Podcast save failed: " + result.error);
-      setIsLoading(false);
+      toast(
+        <div>
+          <div className="text-red-600">
+            Podcast save failed: {result.error}
+          </div>
+          <div className="w-full bg-gray-200 rounded h-2 mt-2">
+            <div
+              className="bg-red-500 h-2 rounded"
+              style={{ width: `100%`, transition: "width 0.3s" }}
+            />
+          </div>
+        </div>,
+        { id: "podcast-upload-progress", duration: 5000 }
+      );
       return;
     }
-    setSuccess("Podcast saved successfully!");
-    setIsLoading(false);
-    if (onSave) onSave();
-    else router.push("/podcasts");
+    toast(
+      <div>
+        <div className="text-green-600">Podcast saved successfully!</div>
+        <div className="w-full bg-gray-200 rounded h-2 mt-2">
+          <div
+            className="bg-green-500 h-2 rounded"
+            style={{ width: `100%`, transition: "width 0.3s" }}
+          />
+        </div>
+      </div>,
+      { id: "podcast-upload-progress", duration: 3000 }
+    );
   };
 
   const generateSlug = () => {
