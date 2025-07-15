@@ -54,11 +54,9 @@ export function PodcastEditor({
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: "",
-    slug: "",
     description: "",
     content: "",
     status: "draft",
-    author: "Admin",
     tags: [] as string[],
     audioFile: "",
     duration: "",
@@ -282,27 +280,6 @@ export function PodcastEditor({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="slug"
-                    placeholder="episode-23-web-development-trends"
-                    value={formData.slug}
-                    onChange={(e) => handleInputChange("slug", e.target.value)}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={generateSlug}
-                    disabled={!formData.title}
-                  >
-                    Generate
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -423,16 +400,6 @@ export function PodcastEditor({
                   onChange={(e) =>
                     handleInputChange("publishDate", e.target.value)
                   }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="author">Author</Label>
-                <Input
-                  id="author"
-                  placeholder="Episode author"
-                  value={formData.author}
-                  onChange={(e) => handleInputChange("author", e.target.value)}
                 />
               </div>
             </CardContent>

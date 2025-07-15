@@ -251,7 +251,6 @@ export function PodcastList() {
                           onClick={() => {
                             setEditingPodcast({
                               title: podcast.title,
-                              slug: podcast.slug,
                               description: podcast.description,
                               content: podcast.content,
                               status: podcast.status,
