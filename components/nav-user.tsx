@@ -2,7 +2,6 @@
 
 import {
   IconDotsVertical,
-  IconLogout,
   IconNotification,
   IconUserCircle,
   IconWorld,
@@ -138,10 +137,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <IconLogout />
-              Log out
-            </DropdownMenuItem>
+            
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
