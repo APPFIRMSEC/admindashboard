@@ -12,6 +12,7 @@ import {
   IconInnerShadowTop,
   IconStar,
   IconEdit,
+  IconAutomation,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -42,6 +43,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Edit Home Page",
       url: "/edit-home",
       icon: IconEdit,
+    },
+    
+    {
+      title: "Edit About Page",
+      url: "/edit-about",
+      icon: IconAutomation,
     },
     {
       title: "Featured Post",
@@ -77,9 +84,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: IconDashboard,
     },
     {
-      title: "Edit Home Page",
-      url: "/edit-home",
-      icon: IconEdit,
+      title: "Edit About Page",
+      url: "/edit-about",
+      icon: IconAutomation,
     },
     {
       title: "Featured Post",
