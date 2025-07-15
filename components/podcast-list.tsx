@@ -36,6 +36,7 @@ import {
   User,
   Clock,
   Download,
+  Pause,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -51,6 +52,7 @@ import type { PodcastFormData } from "@/components/podcast-editor";
 import { fetchPodcasts } from "@/lib/utils";
 import type { Podcast } from "@/lib/utils";
 import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
+import { useRef } from "react";
 
 export function PodcastList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,6 +62,16 @@ export function PodcastList() {
     null
   );
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const [playingPodcastId, setPlayingPodcastId] = useState<
+    string | number | null
+  >(null);
+  const playButtonRefs = useRef<
+    Record<string | number, HTMLButtonElement | null>
+  >({});
+  const [popoverPosition, setPopoverPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const refreshKey = usePodcastRefreshStore((state) => state.refreshKey);
 
   useEffect(() => {
@@ -111,6 +123,31 @@ export function PodcastList() {
       statusFilter === "all" || podcast.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handlePlayClick = (podcast: Podcast) => {
+    if (playingPodcastId === podcast.id) {
+      setPlayingPodcastId(null);
+      setPopoverPosition(null);
+    } else {
+      setPlayingPodcastId(podcast.id);
+      // Position the popover below the play button
+      const btn = playButtonRefs.current[podcast.id];
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        const popoverWidth = 240; // px, matches minWidth below
+        const spaceRight = window.innerWidth - rect.left;
+        let left = rect.left + window.scrollX;
+        // If not enough space to the right, open to the left
+        if (spaceRight < popoverWidth + 16) {
+          left = rect.right + window.scrollX - popoverWidth;
+        }
+        setPopoverPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left,
+        });
+      }
+    }
+  };
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
@@ -254,9 +291,22 @@ export function PodcastList() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         {podcast.audioUrl && (
-                          <Button variant="ghost" size="sm">
-                            <Play className="h-4 w-4" />
-                          </Button>
+                          <>
+                            <Button
+                              ref={(el) => {
+                                playButtonRefs.current[podcast.id] = el;
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePlayClick(podcast)}
+                            >
+                              {playingPodcastId === podcast.id ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
                         )}
                         <Button
                           variant="ghost"
@@ -292,6 +342,45 @@ export function PodcastList() {
                 ))}
               </TableBody>
             </Table>
+            {/* Popover for audio player */}
+            {playingPodcastId && popoverPosition && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: popoverPosition.top,
+                  left: popoverPosition.left,
+                  zIndex: 1000,
+                  background: "white",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                  padding: 12,
+                  minWidth: 240,
+                }}
+              >
+                <audio
+                  controls
+                  autoPlay
+                  src={
+                    filteredPodcasts.find((p) => p.id === playingPodcastId)
+                      ?.audioUrl ?? undefined
+                  }
+                  className="w-full"
+                />
+                <div className="flex justify-end mt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setPlayingPodcastId(null);
+                      setPopoverPosition(null);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
