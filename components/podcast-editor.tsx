@@ -189,6 +189,22 @@ export function PodcastEditor({
     setFormData((prev) => ({ ...prev, slug }));
   };
 
+  const handleAudioLoadedMetadata = (
+    e: React.SyntheticEvent<HTMLAudioElement>
+  ) => {
+    const audio = e.currentTarget;
+    if (!isNaN(audio.duration)) {
+      const minutes = Math.floor(audio.duration / 60);
+      const seconds = Math.floor(audio.duration % 60)
+        .toString()
+        .padStart(2, "0");
+      setFormData((prev) => ({
+        ...prev,
+        duration: `${minutes}:${seconds}`,
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6 px-4 lg:px-6">
       {/* Header */}
@@ -326,7 +342,11 @@ export function PodcastEditor({
                 <div className="space-y-2">
                   <Label>Audio Preview</Label>
                   <div className="border rounded-lg p-4 bg-muted/50">
-                    <audio controls className="w-full">
+                    <audio
+                      controls
+                      className="w-full"
+                      onLoadedMetadata={handleAudioLoadedMetadata}
+                    >
                       <source src={audioPreview} type="audio/mpeg" />
                       Your browser does not support the audio element.
                     </audio>
