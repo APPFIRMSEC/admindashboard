@@ -65,6 +65,9 @@ export function EditAboutPage() {
   const [newTeamImageFile, setNewTeamImageFile] =
     useState<FileWithPreview | null>(null);
 
+  // Track images to delete on save
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+
   // Fetch about data on component load
   useEffect(() => {
     const fetchAboutData = async () => {
@@ -167,25 +170,13 @@ export function EditAboutPage() {
   const handleRemoveTeam = async (idx: number) => {
     const memberToRemove = formData.team[idx];
 
-    // Delete the team member's image from storage if it exists
+    // Track the team member's image for deletion on save if it's a stored image
     if (
       memberToRemove?.imageUrl &&
       memberToRemove.imageUrl !== "/placeholder.png" &&
-      memberToRemove.imageUrl.includes("supabase.co")
+      !memberToRemove.imageUrl.startsWith("blob:")
     ) {
-      try {
-        const response = await fetch("/api/about/delete-image", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: memberToRemove.imageUrl }),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to delete team member image");
-        }
-      } catch (deleteError) {
-        console.error("Error deleting team member image:", deleteError);
-      }
+      setImagesToDelete((prev) => [...prev, memberToRemove.imageUrl]);
     }
 
     // Cleanup local file preview
@@ -226,8 +217,11 @@ export function EditAboutPage() {
       return;
     }
 
-    // If it's a local preview, just clear it
-    if (!imageUrl.includes("supabase.co")) {
+    // Check if it's a local preview (blob URL)
+    const isLocalPreview = imageUrl.startsWith("blob:");
+
+    // If it's a local preview, just clear it immediately
+    if (isLocalPreview) {
       if (type === "main") {
         if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
         setMainImageFile(null);
@@ -250,34 +244,22 @@ export function EditAboutPage() {
       return;
     }
 
-    // If it's a stored image, delete from storage
-    try {
-      const response = await fetch("/api/about/delete-image", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ imageUrl }),
-      });
+    // If it's a stored image, track it for deletion on save and update UI immediately
+    if (!isLocalPreview) {
+      // Add to images to delete on save
+      setImagesToDelete((prev) => [...prev, imageUrl]);
 
-      if (response.ok) {
-        if (type === "main") {
-          setFormData((prev) => ({ ...prev, imageUrl: "" }));
-        } else if (type === "team" && teamIndex !== undefined) {
-          setFormData((prev) => ({
-            ...prev,
-            team: prev.team.map((member, i) =>
-              i === teamIndex ? { ...member, imageUrl: "" } : member
-            ),
-          }));
-        }
-      } else {
-        const error = await response.json();
-        alert(`Error deleting image: ${error.error}`);
+      // Update UI immediately
+      if (type === "main") {
+        setFormData((prev) => ({ ...prev, imageUrl: "" }));
+      } else if (type === "team" && teamIndex !== undefined) {
+        setFormData((prev) => ({
+          ...prev,
+          team: prev.team.map((member, i) =>
+            i === teamIndex ? { ...member, imageUrl: "" } : member
+          ),
+        }));
       }
-    } catch (error) {
-      console.error("Error deleting image:", error);
-      alert("Failed to delete image");
     }
   };
 
@@ -387,6 +369,27 @@ export function EditAboutPage() {
       });
 
       if (response.ok) {
+        // Delete tracked images from storage
+        if (imagesToDelete.length > 0) {
+          const deletePromises = imagesToDelete.map(async (imageUrl) => {
+            try {
+              const deleteResponse = await fetch("/api/about/delete-image", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl }),
+              });
+              if (!deleteResponse.ok) {
+                console.error(`Failed to delete image: ${imageUrl}`);
+              }
+            } catch (error) {
+              console.error(`Error deleting image ${imageUrl}:`, error);
+            }
+          });
+
+          await Promise.all(deletePromises);
+          setImagesToDelete([]); // Clear the tracked images
+        }
+
         // Clear all file states after successful save
         if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
         setMainImageFile(null);
