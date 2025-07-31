@@ -194,4 +194,19 @@ model Tag {
   blogPosts BlogPost[]
   
   @@map("tags")
+}
+
+// About page content management
+model About {
+  id          String   @id @default(cuid())
+  mission     String
+  vision      String
+  about       String
+  imageUrl    String?
+  team        Json     // Store team array as JSON
+  siteId      String   @unique // To support multiple sites
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("about")
 } 
