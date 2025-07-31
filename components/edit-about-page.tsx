@@ -29,6 +29,11 @@ interface AboutData {
   team: TeamMember[];
 }
 
+interface FileWithPreview {
+  file: File;
+  preview: string;
+}
+
 export function EditAboutPage() {
   const { currentSite } = useSiteContext();
 
@@ -50,6 +55,16 @@ export function EditAboutPage() {
     imageUrl: "",
   });
 
+  // Store files for upload on save
+  const [mainImageFile, setMainImageFile] = useState<FileWithPreview | null>(
+    null
+  );
+  const [teamImageFiles, setTeamImageFiles] = useState<
+    Map<number, FileWithPreview>
+  >(new Map());
+  const [newTeamImageFile, setNewTeamImageFile] =
+    useState<FileWithPreview | null>(null);
+
   // Fetch about data on component load
   useEffect(() => {
     const fetchAboutData = async () => {
@@ -69,6 +84,17 @@ export function EditAboutPage() {
     fetchAboutData();
   }, [currentSite]);
 
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
+      teamImageFiles.forEach((fileWithPreview) => {
+        URL.revokeObjectURL(fileWithPreview.preview);
+      });
+      if (newTeamImageFile) URL.revokeObjectURL(newTeamImageFile.preview);
+    };
+  }, [mainImageFile, teamImageFiles, newTeamImageFile]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -76,8 +102,12 @@ export function EditAboutPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setFormData((prev) => ({ ...prev, imageUrl: url }));
+      // Cleanup previous preview
+      if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
+
+      const preview = URL.createObjectURL(file);
+      setMainImageFile({ file, preview });
+      setFormData((prev) => ({ ...prev, imageUrl: preview }));
     }
   };
 
@@ -87,11 +117,22 @@ export function EditAboutPage() {
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
+      // Cleanup previous preview
+      const existingFile = teamImageFiles.get(idx);
+      if (existingFile) URL.revokeObjectURL(existingFile.preview);
+
+      const preview = URL.createObjectURL(file);
+
+      setTeamImageFiles((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(idx, { file, preview });
+        return newMap;
+      });
+
       setFormData((prev) => ({
         ...prev,
         team: prev.team.map((member, i) =>
-          i === idx ? { ...member, imageUrl: url } : member
+          i === idx ? { ...member, imageUrl: preview } : member
         ),
       }));
     }
@@ -109,15 +150,203 @@ export function EditAboutPage() {
   const handleAddTeam = () => {
     if (newTeam.name && newTeam.role) {
       setFormData((prev) => ({ ...prev, team: [...prev.team, newTeam] }));
+
+      // Move new team image file to the team files map
+      if (newTeamImageFile) {
+        const newIndex = formData.team.length;
+        setTeamImageFiles(
+          (prev) => new Map(prev.set(newIndex, newTeamImageFile))
+        );
+        setNewTeamImageFile(null);
+      }
+
       setNewTeam({ name: "", role: "", imageUrl: "" });
     }
   };
 
-  const handleRemoveTeam = (idx: number) => {
+  const handleRemoveTeam = async (idx: number) => {
+    const memberToRemove = formData.team[idx];
+
+    // Delete the team member's image from storage if it exists
+    if (
+      memberToRemove?.imageUrl &&
+      memberToRemove.imageUrl !== "/placeholder.png" &&
+      memberToRemove.imageUrl.includes("supabase.co")
+    ) {
+      try {
+        const response = await fetch("/api/about/delete-image", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: memberToRemove.imageUrl }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to delete team member image");
+        }
+      } catch (deleteError) {
+        console.error("Error deleting team member image:", deleteError);
+      }
+    }
+
+    // Cleanup local file preview
+    const existingFile = teamImageFiles.get(idx);
+    if (existingFile) {
+      URL.revokeObjectURL(existingFile.preview);
+      setTeamImageFiles((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(idx);
+        return newMap;
+      });
+    }
+
     setFormData((prev) => ({
       ...prev,
       team: prev.team.filter((_, i) => i !== idx),
     }));
+  };
+
+  const handleNewTeamImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Cleanup previous preview
+      if (newTeamImageFile) URL.revokeObjectURL(newTeamImageFile.preview);
+
+      const preview = URL.createObjectURL(file);
+      setNewTeamImageFile({ file, preview });
+      setNewTeam((prev) => ({ ...prev, imageUrl: preview }));
+    }
+  };
+
+  const handleDeleteImage = async (
+    imageUrl: string,
+    type: "main" | "team",
+    teamIndex?: number
+  ) => {
+    if (!imageUrl || imageUrl === "/placeholder.png") {
+      return;
+    }
+
+    // If it's a local preview, just clear it
+    if (!imageUrl.includes("supabase.co")) {
+      if (type === "main") {
+        if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
+        setMainImageFile(null);
+        setFormData((prev) => ({ ...prev, imageUrl: "" }));
+      } else if (type === "team" && teamIndex !== undefined) {
+        const existingFile = teamImageFiles.get(teamIndex);
+        if (existingFile) URL.revokeObjectURL(existingFile.preview);
+        setTeamImageFiles((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(teamIndex);
+          return newMap;
+        });
+        setFormData((prev) => ({
+          ...prev,
+          team: prev.team.map((member, i) =>
+            i === teamIndex ? { ...member, imageUrl: "" } : member
+          ),
+        }));
+      }
+      return;
+    }
+
+    // If it's a stored image, delete from storage
+    try {
+      const response = await fetch("/api/about/delete-image", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageUrl }),
+      });
+
+      if (response.ok) {
+        if (type === "main") {
+          setFormData((prev) => ({ ...prev, imageUrl: "" }));
+        } else if (type === "team" && teamIndex !== undefined) {
+          setFormData((prev) => ({
+            ...prev,
+            team: prev.team.map((member, i) =>
+              i === teamIndex ? { ...member, imageUrl: "" } : member
+            ),
+          }));
+        }
+      } else {
+        const error = await response.json();
+        alert(`Error deleting image: ${error.error}`);
+      }
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      alert("Failed to delete image");
+    }
+  };
+
+  const uploadFiles = async () => {
+    const uploadPromises: Promise<{
+      type: string;
+      index?: number;
+      url: string;
+    }>[] = [];
+
+    // Upload main image if selected
+    if (mainImageFile) {
+      const uploadFormData = new FormData();
+      uploadFormData.append("image", mainImageFile.file);
+      uploadFormData.append("oldImageUrl", formData.imageUrl || "");
+
+      uploadPromises.push(
+        fetch("/api/about/upload-image", {
+          method: "POST",
+          body: uploadFormData,
+        }).then(async (response) => {
+          if (!response.ok) throw new Error("Failed to upload main image");
+          const data = await response.json();
+          return { type: "main", url: data.imageUrl };
+        })
+      );
+    }
+
+    // Upload team member images
+    for (const [index, fileWithPreview] of teamImageFiles) {
+      const uploadFormData = new FormData();
+      uploadFormData.append("image", fileWithPreview.file);
+      uploadFormData.append(
+        "oldImageUrl",
+        formData.team[index]?.imageUrl || ""
+      );
+
+      uploadPromises.push(
+        fetch("/api/about/upload-image", {
+          method: "POST",
+          body: uploadFormData,
+        }).then(async (response) => {
+          if (!response.ok)
+            throw new Error(`Failed to upload team image ${index}`);
+          const data = await response.json();
+          return { type: "team", index, url: data.imageUrl };
+        })
+      );
+    }
+
+    // Upload new team member image if selected
+    if (newTeamImageFile) {
+      const uploadFormData = new FormData();
+      uploadFormData.append("image", newTeamImageFile.file);
+      uploadFormData.append("oldImageUrl", newTeam.imageUrl || "");
+
+      uploadPromises.push(
+        fetch("/api/about/upload-image", {
+          method: "POST",
+          body: uploadFormData,
+        }).then(async (response) => {
+          if (!response.ok) throw new Error("Failed to upload new team image");
+          const data = await response.json();
+          return { type: "newTeam", url: data.imageUrl };
+        })
+      );
+    }
+
+    return Promise.all(uploadPromises);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,6 +354,27 @@ export function EditAboutPage() {
     setIsLoading(true);
 
     try {
+      // Upload all files first
+      const uploadResults = await uploadFiles();
+
+      // Update form data with uploaded URLs
+      const updatedFormData = { ...formData };
+
+      for (const result of uploadResults) {
+        if (result.type === "main") {
+          updatedFormData.imageUrl = result.url;
+        } else if (result.type === "team" && result.index !== undefined) {
+          updatedFormData.team[result.index].imageUrl = result.url;
+        } else if (result.type === "newTeam") {
+          // Update the new team member that was just added
+          const lastIndex = updatedFormData.team.length - 1;
+          if (lastIndex >= 0) {
+            updatedFormData.team[lastIndex].imageUrl = result.url;
+          }
+        }
+      }
+
+      // Save to database
       const response = await fetch("/api/about", {
         method: "POST",
         headers: {
@@ -132,11 +382,23 @@ export function EditAboutPage() {
         },
         body: JSON.stringify({
           siteId: currentSite,
-          ...formData,
+          ...updatedFormData,
         }),
       });
 
       if (response.ok) {
+        // Clear all file states after successful save
+        if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
+        setMainImageFile(null);
+
+        teamImageFiles.forEach((fileWithPreview) => {
+          URL.revokeObjectURL(fileWithPreview.preview);
+        });
+        setTeamImageFiles(new Map());
+
+        if (newTeamImageFile) URL.revokeObjectURL(newTeamImageFile.preview);
+        setNewTeamImageFile(null);
+
         alert("About page updated successfully!");
       } else {
         const error = await response.json();
@@ -246,13 +508,24 @@ export function EditAboutPage() {
               onChange={handleImageChange}
             />
             {formData.imageUrl && (
-              <Image
-                src={formData.imageUrl || "/placeholder.png"}
-                alt="About"
-                width={256}
-                height={128}
-                className="mt-2 rounded w-full max-w-xs h-32 object-cover border"
-              />
+              <div className="flex items-center gap-2 mt-2">
+                <Image
+                  src={formData.imageUrl || "/placeholder.png"}
+                  alt="About"
+                  width={256}
+                  height={128}
+                  className="rounded w-full max-w-xs h-32 object-cover border"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => handleDeleteImage(formData.imageUrl, "main")}
+                  className="h-8 w-8 p-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -268,13 +541,29 @@ export function EditAboutPage() {
                 className="flex flex-col sm:flex-row items-center gap-4 border rounded-lg p-3"
               >
                 <div className="flex flex-col items-center gap-2">
-                  <Image
-                    src={member.imageUrl || "/placeholder.png"}
-                    alt={member.name}
-                    width={64}
-                    height={64}
-                    className="rounded-full object-cover border"
-                  />
+                  <div className="relative">
+                    <Image
+                      src={member.imageUrl || "/placeholder.png"}
+                      alt={member.name}
+                      width={64}
+                      height={64}
+                      className="rounded-full object-cover border"
+                    />
+                    {member.imageUrl &&
+                      member.imageUrl !== "/placeholder.png" && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() =>
+                            handleDeleteImage(member.imageUrl, "team", idx)
+                          }
+                          className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                  </div>
                   <Input
                     type="file"
                     accept="image/*"
@@ -322,13 +611,7 @@ export function EditAboutPage() {
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const url = URL.createObjectURL(file);
-                      setNewTeam((prev) => ({ ...prev, imageUrl: url }));
-                    }
-                  }}
+                  onChange={handleNewTeamImageChange}
                   className="w-32"
                 />
               </div>
