@@ -24,6 +24,7 @@ import {
   Loader2,
   Upload,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -60,6 +61,8 @@ export function MediaLibrary() {
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Fetch media files from API
   const fetchMediaFiles = async () => {
@@ -146,6 +149,63 @@ export function MediaLibrary() {
       }
       return prev.filter((f) => f.id !== id);
     });
+  };
+
+  // Handle file deletion
+  const handleDeleteFile = async (fileId: string) => {
+    setIsDeleting(fileId);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/media/${fileId}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Delete failed");
+      }
+
+      // Remove from selected files if it was selected
+      setSelectedFiles((prev) => prev.filter((id) => id !== fileId));
+
+      // Refresh the file list
+      await fetchMediaFiles();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setIsDeleting(null);
+      setDeleteConfirm(null);
+    }
+  };
+
+  // Bulk delete selected files
+  const handleBulkDelete = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setIsDeleting("bulk");
+    setError(null);
+
+    try {
+      for (const fileId of selectedFiles) {
+        const response = await fetch(`/api/media/${fileId}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          const result = await response.json();
+          throw new Error(result.error || "Delete failed");
+        }
+      }
+
+      setSelectedFiles([]);
+      await fetchMediaFiles();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Bulk delete failed");
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   useEffect(() => {
@@ -369,6 +429,40 @@ export function MediaLibrary() {
         </Card>
       )}
 
+      {/* Bulk Actions */}
+      {selectedFiles.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Selected Files ({selectedFiles.length})</CardTitle>
+            <CardDescription>Actions for selected files</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => setDeleteConfirm("bulk")}
+                disabled={isDeleting === "bulk"}
+              >
+                {isDeleting === "bulk" ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Selected
+                  </>
+                )}
+              </Button>
+              <Button variant="outline" onClick={() => setSelectedFiles([])}>
+                Clear Selection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Search */}
       <Card>
         <CardHeader>
@@ -484,8 +578,17 @@ export function MediaLibrary() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(file.id);
+                            }}
+                            disabled={isDeleting === file.id}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {isDeleting === file.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -497,6 +600,52 @@ export function MediaLibrary() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              <h3 className="text-lg font-medium">Confirm Delete</h3>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              {deleteConfirm === "bulk"
+                ? `Are you sure you want to delete ${
+                    selectedFiles.length
+                  } file${
+                    selectedFiles.length > 1 ? "s" : ""
+                  }? This action cannot be undone.`
+                : "Are you sure you want to delete this file? This action cannot be undone."}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (deleteConfirm === "bulk") {
+                    handleBulkDelete();
+                  } else {
+                    handleDeleteFile(deleteConfirm);
+                  }
+                }}
+                disabled={isDeleting === deleteConfirm}
+              >
+                {isDeleting === deleteConfirm ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
