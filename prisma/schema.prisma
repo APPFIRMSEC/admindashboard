@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,25 +7,154 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User management with role-based access
 model User {
+  id         String      @id @default(cuid())
+  email      String      @unique
+  name       String
+  avatar     String?
+  role       UserRole    @default(AUTHOR)
+  status     UserStatus  @default(ACTIVE)
+  password   String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  lastLogin  DateTime?
+  blogPosts  BlogPost[]
+  mediaFiles MediaFile[]
+  podcasts   Podcast[]
+
+  @@map("users")
+}
+
+model BlogPost {
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  excerpt        String?
+  content        String
+  status         PostStatus @default(DRAFT)
+  featuredImage  String?
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
+  views          Int        @default(0)
+  readTime       Int?
+  authorId       String
+  author         User       @relation(fields: [authorId], references: [id])
+  tags           Tag[]      @relation("BlogPostToTag")
+
+  @@map("blog_posts")
+}
+
+model Podcast {
+  id             String        @id @default(cuid())
+  title          String
+  description    String
+  status         PodcastStatus @default(DRAFT)
+  audioUrl       String?
+  duration       String?
+  fileSize       String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  downloads      Int           @default(0)
+  authorId       String
+  content        String?
+  episodeNumber  String?
+  seasonNumber   String?
+  seoDescription String?
+  seoKeywords    String?
+  seoTitle       String?
+  tags           String?
+  author         User          @relation(fields: [authorId], references: [id])
+
+  @@map("podcasts")
+}
+
+model MediaFile {
+  id           String    @id @default(cuid())
+  name         String
+  originalName String
+  type         MediaType
+  url          String
+  size         String
+  mimeType     String
+  alt          String?
+  dimensions   String?
+  duration     String?
+  uploadedAt   DateTime  @default(now())
+  uploaderId   String
+  uploader     User      @relation(fields: [uploaderId], references: [id])
+
+  @@map("media_files")
+}
+
+model DashboardItem {
+  id        String          @id @default(cuid())
+  header    String
+  type      String
+  status    DashboardStatus
+  target    String
+  limit     String
+  reviewer  String
+  order     Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@map("dashboard_items")
+}
+
+model SiteSetting {
+  id    String      @id @default(cuid())
+  key   String      @unique
+  value String
+  type  SettingType @default(TEXT)
+
+  @@map("site_settings")
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  color     String?
+  createdAt DateTime   @default(now())
+  blogPosts BlogPost[] @relation("BlogPostToTag")
+
+  @@map("tags")
+}
+
+model about {
+  id        String   @id
+  mission   String
+  vision    String
+  about     String
+  imageUrl  String?
+  team      Json
+  siteId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model HomePage {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  avatar    String?
-  role      UserRole @default(AUTHOR)
-  status    UserStatus @default(ACTIVE)
-  password  String   // Will be hashed
+  site      String   @unique // "appfirmsec" or "ennieboateng"
+  
+  // Hero section - matches frontend
+  heroTitle       String?
+  heroSubtitle    String?
+  heroDescription String?
+  
+  // Insights and Podcasts - stored as JSON arrays
+  insights        Json? // Array of insight objects
+  podcasts        Json? // Array of podcast objects
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  lastLogin DateTime?
-
-  // Relations
-  blogPosts BlogPost[]
-  podcasts  Podcast[]
-  mediaFiles MediaFile[]
   
-  @@map("users")
+  @@map("home_pages")
 }
 
 enum UserRole {
@@ -42,69 +168,11 @@ enum UserStatus {
   INACTIVE
 }
 
-// Blog post management
-model BlogPost {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  excerpt     String?
-  content     String
-  status      PostStatus  @default(DRAFT)
-  featuredImage String?
-  publishedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
-  // SEO fields
-  seoTitle       String?
-  seoDescription String?
-  seoKeywords    String?
-  
-  // Analytics
-  views       Int @default(0)
-  readTime    Int? // in minutes
-  
-  // Relations
-  author   User   @relation(fields: [authorId], references: [id])
-  authorId String
-  tags     Tag[]
-  
-  @@map("blog_posts")
-}
-
 enum PostStatus {
   DRAFT
   SCHEDULED
   PUBLISHED
   ARCHIVED
-}
-
-// Podcast episode management
-model Podcast {
-  id          String        @id @default(cuid())
-  title       String
-  description String
-  status      PodcastStatus @default(DRAFT)
-  audioUrl    String?
-  duration    String?       // Format: "45:30"
-  fileSize    String?       // Format: "32.5 MB"
-  publishedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  downloads   Int           @default(0)
-  author      User          @relation(fields: [authorId], references: [id])
-  authorId    String
-
-  // Added fields for frontend compatibility
-  seasonNumber  String?
-  episodeNumber String?
-  seoTitle      String?
-  seoDescription String?
-  seoKeywords   String?
-  tags          String?
-  content       String?
-
-  @@map("podcasts")
 }
 
 enum PodcastStatus {
@@ -114,27 +182,6 @@ enum PodcastStatus {
   ARCHIVED
 }
 
-// Media library management
-model MediaFile {
-  id          String    @id @default(cuid())
-  name        String
-  originalName String
-  type        MediaType
-  url         String
-  size        String    // Format: "2.4 MB"
-  mimeType    String
-  alt         String?
-  dimensions  String?   // Format: "1920x1080" for images
-  duration    String?   // For audio/video files
-  uploadedAt  DateTime  @default(now())
-  
-  // Relations
-  uploader   User   @relation(fields: [uploaderId], references: [id])
-  uploaderId String
-  
-  @@map("media_files")
-}
-
 enum MediaType {
   IMAGE
   AUDIO
@@ -142,36 +189,10 @@ enum MediaType {
   DOCUMENT
 }
 
-// Dashboard project tracking (based on your data.json)
-model DashboardItem {
-  id       String           @id @default(cuid())
-  header   String
-  type     String
-  status   DashboardStatus
-  target   String
-  limit    String
-  reviewer String
-  order    Int              @default(0) // For drag & drop ordering
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  
-  @@map("dashboard_items")
-}
-
 enum DashboardStatus {
   IN_PROCESS
   DONE
   PENDING
-}
-
-// Site settings and configuration
-model SiteSetting {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String
-  type  SettingType @default(TEXT)
-  
-  @@map("site_settings")
 }
 
 enum SettingType {
