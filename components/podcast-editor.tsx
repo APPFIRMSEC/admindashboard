@@ -14,13 +14,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Save, Tag, X } from "lucide-react";
-import { supabaseBrowser } from "@/lib/supabase-browser";
+import { Save, Tag, X, FolderOpen } from "lucide-react";
 import { createPodcast, updatePodcast } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRef } from "react";
 import type { PodcastCreatePayload } from "@/lib/utils";
 import { usePodcastRefreshStore } from "@/stores/podcast-refresh";
+import { MediaLibraryPicker } from "./media-library-picker";
 
 export type PodcastFormData = {
   id?: string | number;
@@ -39,6 +39,25 @@ export type PodcastFormData = {
   episodeNumber: string;
   seasonNumber: string;
 };
+
+interface MediaFile {
+  id: string;
+  name: string;
+  originalName: string;
+  type: string;
+  url: string;
+  size: string;
+  mimeType: string;
+  alt?: string;
+  dimensions?: string;
+  duration?: string;
+  uploadedAt: string;
+  uploader?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
 
 export function PodcastEditor({
   initialData,
@@ -70,6 +89,7 @@ export function PodcastEditor({
   const [audioPreview, setAudioPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
   const progressRef = useRef<number>(0);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const incrementRefreshKey = usePodcastRefreshStore(
@@ -98,14 +118,17 @@ export function PodcastEditor({
         seoKeywords: initialData.seoKeywords
           ? String(initialData.seoKeywords)
           : "",
-        tags: Array.isArray(initialData.tags)
-          ? initialData.tags
-          : initialData.tags
-          ? String(initialData.tags).split(",")
-          : [],
-        content: initialData.content ? String(initialData.content) : "",
-        publishDate: initialData.publishDate || "",
+        publishDate: initialData.publishDate
+          ? String(initialData.publishDate)
+          : "",
+        duration: initialData.duration ? String(initialData.duration) : "",
+        fileSize: initialData.fileSize ? String(initialData.fileSize) : "",
+        audioFile: initialData.audioFile ? String(initialData.audioFile) : "",
+        tags: initialData.tags || [],
       }));
+      if (initialData.audioFile) {
+        setAudioPreview(String(initialData.audioFile));
+      }
     }
   }, [initialData]);
 
@@ -133,14 +156,25 @@ export function PodcastEditor({
   const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Create local preview without uploading
       const url = URL.createObjectURL(file);
       setFormData((prev) => ({
         ...prev,
-        audioFile: url,
+        audioFile: url, // This will be a blob URL for now
         fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
       }));
       setAudioPreview(url);
     }
+  };
+
+  // Handle Media Library file selection
+  const handleMediaFileSelect = (file: MediaFile) => {
+    setFormData((prev) => ({
+      ...prev,
+      audioFile: file.url,
+      fileSize: file.size,
+    }));
+    setAudioPreview(file.url);
   };
 
   const handleAddTag = () => {
@@ -171,16 +205,14 @@ export function PodcastEditor({
     let progress = 0;
     toast(
       <div>
-        <div>Uploading and saving podcast...</div>
+        <div>Saving podcast...</div>
         <div className="w-full bg-gray-200 rounded h-2 mt-2">
           <div
             className="bg-blue-500 h-2 rounded"
             style={{ width: `${progress}%`, transition: "width 0.3s" }}
           />
         </div>
-        {progress >= 90 && (
-          <div className="text-xs mt-1">Finalizing upload...</div>
-        )}
+        {progress >= 90 && <div className="text-xs mt-1">Finalizing...</div>}
       </div>,
       { duration: Infinity, id: "podcast-upload-progress" }
     );
@@ -192,7 +224,7 @@ export function PodcastEditor({
         progressRef.current = progress;
         toast(
           <div>
-            <div>Uploading and saving podcast...</div>
+            <div>Saving podcast...</div>
             <div className="w-full bg-gray-200 rounded h-2 mt-2">
               <div
                 className="bg-blue-500 h-2 rounded"
@@ -200,7 +232,7 @@ export function PodcastEditor({
               />
             </div>
             {progress >= 90 && (
-              <div className="text-xs mt-1">Finalizing upload...</div>
+              <div className="text-xs mt-1">Finalizing...</div>
             )}
           </div>,
           { duration: Infinity, id: "podcast-upload-progress" }
@@ -214,49 +246,56 @@ export function PodcastEditor({
     if (onSave) onSave();
     else router.push("/podcasts");
 
+    // Handle audio file upload if it's a local blob URL
     let audioUrl = formData.audioFile;
     let fileSize = formData.fileSize;
     const duration = formData.duration;
 
-    // If audioFile is a local object URL, upload the file directly to Supabase
-    const fileInput = document.getElementById(
-      "audioFile"
-    ) as HTMLInputElement | null;
-    const file = fileInput?.files?.[0];
-    if (file) {
-      const filename = `${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabaseBrowser.storage
-        .from("podcasts-audio")
-        .upload(filename, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: file.type,
+    // Check if audioFile is a blob URL (local file that needs uploading)
+    if (audioUrl.startsWith("blob:")) {
+      const fileInput = document.getElementById(
+        "audioFile"
+      ) as HTMLInputElement | null;
+      const file = fileInput?.files?.[0];
+
+      if (file) {
+        // Upload to Media Library
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("category", "podcast");
+        formData.append("subcategory", "episodes");
+        formData.append("alt", file.name);
+
+        const response = await fetch("/api/media/upload", {
+          method: "POST",
+          body: formData,
         });
-      if (uploadError) {
-        if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
-        toast(
-          <div>
-            <div className="text-red-600">
-              Audio upload failed: {uploadError.message}
-            </div>
-            <div className="w-full bg-gray-200 rounded h-2 mt-2">
-              <div
-                className="bg-red-500 h-2 rounded"
-                style={{ width: `100%`, transition: "width 0.3s" }}
-              />
-            </div>
-          </div>,
-          { id: "podcast-upload-progress", duration: 5000 }
-        );
-        return;
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (progressTimerRef.current) clearTimeout(progressTimerRef.current);
+          toast(
+            <div>
+              <div className="text-red-600">
+                Audio upload failed: {result.error}
+              </div>
+              <div className="w-full bg-gray-200 rounded h-2 mt-2">
+                <div
+                  className="bg-red-500 h-2 rounded"
+                  style={{ width: `100%`, transition: "width 0.3s" }}
+                />
+              </div>
+            </div>,
+            { id: "podcast-upload-progress", duration: 5000 }
+          );
+          return;
+        }
+
+        // Use the uploaded file URL
+        audioUrl = result.file.url;
+        fileSize = result.file.size;
       }
-      // Get the public URL
-      const publicUrlData = supabaseBrowser.storage
-        .from("podcasts-audio")
-        .getPublicUrl(filename).data;
-      audioUrl = publicUrlData.publicUrl;
-      fileSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
-      // Duration will be set from formData or can be calculated from audio element
     }
 
     // Prepare podcast data, ensure status is uppercase
@@ -449,22 +488,40 @@ export function PodcastEditor({
                 )
               ) : (
                 // In create mode: show file input
-                <div className="space-y-2">
-                  <Label htmlFor="audioFile">Audio File</Label>
-                  <Input
-                    id="audioFile"
-                    type="file"
-                    accept="audio/*"
-                    onChange={handleAudioFileChange}
-                    disabled={isLoading}
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="audioFile">Audio File</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="audioFile"
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleAudioFileChange}
+                        disabled={isLoading}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowMediaPicker(true)}
+                        disabled={isLoading}
+                      >
+                        <FolderOpen className="mr-2 h-4 w-4" />
+                        Select from Media Library
+                      </Button>
+                    </div>
+                  </div>
+
                   {audioPreview && (
-                    <audio
-                      controls
-                      src={audioPreview}
-                      className="w-full mt-2"
-                      onLoadedMetadata={handleAudioLoadedMetadata}
-                    />
+                    <div className="space-y-2">
+                      <Label>Audio Preview</Label>
+                      <audio
+                        controls
+                        src={audioPreview}
+                        className="w-full"
+                        onLoadedMetadata={handleAudioLoadedMetadata}
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -622,6 +679,17 @@ export function PodcastEditor({
           </Card>
         </div>
       </form>
+
+      {/* Media Library Picker */}
+      {showMediaPicker && (
+        <MediaLibraryPicker
+          fileType="audio"
+          onSelect={handleMediaFileSelect}
+          onClose={() => setShowMediaPicker(false)}
+          title="Select Audio File"
+          description="Choose an audio file from your media library"
+        />
+      )}
     </div>
   );
 }
