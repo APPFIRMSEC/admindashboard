@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
         url: publicUrlData.publicUrl,
         size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         mimeType: file.type,
+        path: `/${category}/${subcategory}`,
         alt: alt || file.name,
         uploaderId: session.user.id,
       },

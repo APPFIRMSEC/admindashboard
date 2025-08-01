@@ -5,7 +5,6 @@ import { db } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
-    // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -13,19 +12,20 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
-    const category = searchParams.get("category");
     const search = searchParams.get("search");
+    const path = searchParams.get("path") || "/";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = (page - 1) * limit;
 
-    // Build where clause for filtering
     const where: any = {};
 
+    // Filter by file type
     if (type) {
       where.type = type.toUpperCase();
     }
 
+    // Filter by search term
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
@@ -34,10 +34,15 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    // Get total count for pagination
-    const totalCount = await db.mediaFile.count({ where });
+    // Filter by path (folder structure)
+    if (path && path !== "/") {
+      where.path = path;
+    } else if (path === "/") {
+      // When at root, only show files that are directly in root
+      where.path = "/";
+    }
 
-    // Get media files with pagination
+    const totalCount = await db.mediaFile.count({ where });
     const mediaFiles = await db.mediaFile.findMany({
       where,
       include: {
@@ -56,7 +61,6 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    // Transform data for frontend
     const files = mediaFiles.map((file) => ({
       id: file.id,
       name: file.name,

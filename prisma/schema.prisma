@@ -25,8 +25,6 @@ model User {
   @@map("users")
 }
 
-
-
 model Podcast {
   id             String        @id @default(cuid())
   title          String
@@ -60,6 +58,7 @@ model MediaFile {
   url          String
   size         String
   mimeType     String
+  path         String    @default("/")
   alt          String?
   dimensions   String?
   duration     String?
@@ -94,41 +93,20 @@ model SiteSetting {
   @@map("site_settings")
 }
 
-
-
-
-
 model HomePage {
-  id        String   @id @default(cuid())
-  site      String   @unique // "appfirmsec" or "ennieboateng"
-  
-  // Hero section - matches frontend
+  id              String   @id @default(cuid())
+  site            String   @unique
   heroTitle       String?
   heroSubtitle    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   heroDescription String?
-  
-  // Insights and Podcasts - stored as JSON arrays
-  insights        Json? // Array of insight objects
-  podcasts        Json? // Array of podcast objects
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  insights        Json?
+  podcasts        Json?
+
   @@map("home_pages")
 }
 
-enum UserRole {
-  ADMIN
-  EDITOR
-  AUTHOR
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-}
-
-// Blog post management
 model BlogPost {
   id             String     @id @default(cuid())
   title          String
@@ -145,12 +123,48 @@ model BlogPost {
   seoKeywords    String?
   views          Int        @default(0)
   readTime       Int?
-  featured       Boolean    @default(false)
   authorId       String
+  featured       Boolean    @default(false)
   author         User       @relation(fields: [authorId], references: [id])
   tags           Tag[]      @relation("BlogPostToTag")
 
   @@map("blog_posts")
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  color     String?
+  createdAt DateTime   @default(now())
+  blogPosts BlogPost[] @relation("BlogPostToTag")
+
+  @@map("tags")
+}
+
+model About {
+  id        String   @id @default(cuid())
+  mission   String
+  vision    String
+  about     String
+  imageUrl  String?
+  team      Json
+  siteId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("about")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  AUTHOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum PostStatus {
@@ -187,30 +201,3 @@ enum SettingType {
   BOOLEAN
   JSON
 }
-
-// Tags for blog posts
-model Tag {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  slug      String     @unique
-  color     String?
-  createdAt DateTime   @default(now())
-  blogPosts BlogPost[] @relation("BlogPostToTag")
-
-  @@map("tags")
-}
-
-// About page content management
-model About {
-  id          String   @id @default(cuid())
-  mission     String
-  vision      String
-  about       String
-  imageUrl    String?
-  team        Json     // Store team array as JSON
-  siteId      String   @unique // To support multiple sites
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@map("about")
-} 
