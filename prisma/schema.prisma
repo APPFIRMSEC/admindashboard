@@ -115,28 +115,9 @@ model SiteSetting {
   @@map("site_settings")
 }
 
-model Tag {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  slug      String     @unique
-  color     String?
-  createdAt DateTime   @default(now())
-  blogPosts BlogPost[] @relation("BlogPostToTag")
 
-  @@map("tags")
-}
 
-model about {
-  id        String   @id
-  mission   String
-  vision    String
-  about     String
-  imageUrl  String?
-  team      Json
-  siteId    String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-}
+
 
 model HomePage {
   id        String   @id @default(cuid())
