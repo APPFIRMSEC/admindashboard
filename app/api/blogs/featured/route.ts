@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-utils";
 
 // GET /api/blogs/featured - Get all featured blog posts
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await requireAuth();
 
