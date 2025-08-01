@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
-import { Save, UserPlus, Trash2 } from "lucide-react";
+import { Save, UserPlus, Trash2, FolderOpen } from "lucide-react";
 import { useSiteContext } from "@/contexts/site-context";
+import { MediaLibraryPicker } from "./media-library-picker";
 
 interface TeamMember {
   name: string;
@@ -32,6 +33,25 @@ interface AboutData {
 interface FileWithPreview {
   file: File;
   preview: string;
+}
+
+interface MediaFile {
+  id: string;
+  name: string;
+  originalName: string;
+  type: string;
+  url: string;
+  size: string;
+  mimeType: string;
+  alt?: string;
+  dimensions?: string;
+  duration?: string;
+  uploadedAt: string;
+  uploader?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export function EditAboutPage() {
@@ -54,6 +74,13 @@ export function EditAboutPage() {
     role: "",
     imageUrl: "",
   });
+
+  // Media Library picker states
+  const [showMainImagePicker, setShowMainImagePicker] = useState(false);
+  const [showTeamImagePicker, setShowTeamImagePicker] = useState<number | null>(
+    null
+  );
+  const [showNewTeamImagePicker, setShowNewTeamImagePicker] = useState(false);
 
   // Store files for upload on save
   const [mainImageFile, setMainImageFile] = useState<FileWithPreview | null>(
@@ -100,6 +127,26 @@ export function EditAboutPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Handle Media Library file selection for main image
+  const handleMainImageSelect = (file: MediaFile) => {
+    setFormData((prev) => ({ ...prev, imageUrl: file.url }));
+  };
+
+  // Handle Media Library file selection for team member image
+  const handleTeamImageSelect = (file: MediaFile, idx: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      team: prev.team.map((member, i) =>
+        i === idx ? { ...member, imageUrl: file.url } : member
+      ),
+    }));
+  };
+
+  // Handle Media Library file selection for new team member image
+  const handleNewTeamImageSelect = (file: MediaFile) => {
+    setNewTeam((prev) => ({ ...prev, imageUrl: file.url }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -504,32 +551,45 @@ export function EditAboutPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Input
-              id="about-image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            {formData.imageUrl && (
-              <div className="flex items-center gap-2 mt-2">
-                <Image
-                  src={formData.imageUrl || "/placeholder.png"}
-                  alt="About"
-                  width={256}
-                  height={128}
-                  className="rounded w-full max-w-xs h-32 object-cover border"
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  id="about-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
                 />
                 <Button
                   type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => handleDeleteImage(formData.imageUrl, "main")}
-                  className="h-8 w-8 p-0"
+                  variant="outline"
+                  onClick={() => setShowMainImagePicker(true)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Select from Media Library
                 </Button>
               </div>
-            )}
+              {formData.imageUrl && (
+                <div className="flex items-center gap-2">
+                  <Image
+                    src={formData.imageUrl || "/placeholder.png"}
+                    alt="About"
+                    width={256}
+                    height={128}
+                    className="rounded w-full max-w-xs h-32 object-cover border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDeleteImage(formData.imageUrl, "main")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
         <Card className="w-full lg:col-span-2">
@@ -567,12 +627,24 @@ export function EditAboutPage() {
                         </Button>
                       )}
                   </div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleTeamImageChange(e, idx)}
-                    className="w-32"
-                  />
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleTeamImageChange(e, idx)}
+                      className="w-32"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowTeamImagePicker(idx)}
+                      className="w-32"
+                    >
+                      <FolderOpen className="mr-1 h-3 w-3" />
+                      Media Library
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex-1 w-full grid gap-2">
                   <Input
@@ -611,12 +683,24 @@ export function EditAboutPage() {
                   height={64}
                   className="rounded-full object-cover border"
                 />
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleNewTeamImageChange}
-                  className="w-32"
-                />
+                <div className="flex flex-col gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleNewTeamImageChange}
+                    className="w-32"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewTeamImagePicker(true)}
+                    className="w-32"
+                  >
+                    <FolderOpen className="mr-1 h-3 w-3" />
+                    Media Library
+                  </Button>
+                </div>
               </div>
               <div className="flex-1 w-full grid gap-2">
                 <Input
@@ -652,6 +736,37 @@ export function EditAboutPage() {
           </Button>
         </div>
       </form>
+
+      {/* Media Library Pickers */}
+      {showMainImagePicker && (
+        <MediaLibraryPicker
+          fileType="image"
+          onSelect={handleMainImageSelect}
+          onClose={() => setShowMainImagePicker(false)}
+          title="Select Main Image"
+          description="Choose an image from your media library"
+        />
+      )}
+
+      {showTeamImagePicker !== null && (
+        <MediaLibraryPicker
+          fileType="image"
+          onSelect={(file) => handleTeamImageSelect(file, showTeamImagePicker)}
+          onClose={() => setShowTeamImagePicker(null)}
+          title="Select Team Member Image"
+          description="Choose an image from your media library"
+        />
+      )}
+
+      {showNewTeamImagePicker && (
+        <MediaLibraryPicker
+          fileType="image"
+          onSelect={handleNewTeamImageSelect}
+          onClose={() => setShowNewTeamImagePicker(false)}
+          title="Select New Team Member Image"
+          description="Choose an image from your media library"
+        />
+      )}
     </div>
   );
 }
