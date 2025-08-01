@@ -44,31 +44,26 @@ enum UserStatus {
 
 // Blog post management
 model BlogPost {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  excerpt     String?
-  content     String
-  status      PostStatus  @default(DRAFT)
-  featuredImage String?
-  publishedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
-  // SEO fields
+  id             String     @id @default(cuid())
+  title          String
+  slug           String     @unique
+  excerpt        String?
+  content        String
+  status         PostStatus @default(DRAFT)
+  featuredImage  String?
+  publishedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   seoTitle       String?
   seoDescription String?
   seoKeywords    String?
-  
-  // Analytics
-  views       Int @default(0)
-  readTime    Int? // in minutes
-  
-  // Relations
-  author   User   @relation(fields: [authorId], references: [id])
-  authorId String
-  tags     Tag[]
-  
+  views          Int        @default(0)
+  readTime       Int?
+  featured       Boolean    @default(false)
+  authorId       String
+  author         User       @relation(fields: [authorId], references: [id])
+  tags           Tag[]      @relation("BlogPostToTag")
+
   @@map("blog_posts")
 }
 
@@ -189,9 +184,40 @@ model Tag {
   slug      String     @unique
   color     String?
   createdAt DateTime   @default(now())
-  
-  // Relations
-  blogPosts BlogPost[]
-  
+  blogPosts BlogPost[] @relation("BlogPostToTag")
+
   @@map("tags")
+}
+
+// About page content management
+model about {
+  id        String   @id
+  mission   String
+  vision    String
+  about     String
+  imageUrl  String?
+  team      Json
+  siteId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+// Home page content management
+model HomePage {
+  id        String   @id @default(cuid())
+  site      String   @unique // "appfirmsec" or "ennieboateng"
+  
+  // Hero section - matches frontend
+  heroTitle       String?
+  heroSubtitle    String?
+  heroDescription String?
+  
+  // Insights and Podcasts - stored as JSON arrays
+  insights        Json? // Array of insight objects
+  podcasts        Json? // Array of podcast objects
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("home_pages")
 } 
