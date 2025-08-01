@@ -1,144 +1,207 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+export default function TestApiPage() {
+  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
-export default function TestAPIPage() {
-  const [results, setResults] = useState<{
-    endpoint: string;
-    method: string;
-    status?: number;
-    data?: unknown;
-    error?: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Media list test
+  const [mediaFiles, setMediaFiles] = useState<any[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [filesError, setFilesError] = useState<string | null>(null);
 
-  const testAPI = async (
-    endpoint: string,
-    method = "GET",
-    body?: Record<string, unknown>
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setLoading(true);
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadResult(null);
+
     try {
-      const response = await fetch(`/api${endpoint}`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: body ? JSON.stringify(body) : undefined,
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category", "test");
+      formData.append("subcategory", "general");
+      formData.append("alt", "Test upload");
+
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
       });
 
-      const data = await response.json();
-      setResults({ endpoint, method, status: response.status, data });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Upload failed");
+      }
+
+      setUploadResult(result);
+      // Refresh the file list after upload
+      fetchMediaFiles();
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      setResults({ endpoint, method, error: errorMessage });
+      setUploadError(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setIsUploading(false);
     }
-    setLoading(false);
   };
 
-  const createTestUser = () => {
-    testAPI("/users", "POST", {
-      name: "Test User",
-      email: `test${Date.now()}@example.com`,
-      password: "password123",
-      role: "AUTHOR",
-    });
+  const fetchMediaFiles = async () => {
+    setIsLoadingFiles(true);
+    setFilesError(null);
+
+    try {
+      const response = await fetch("/api/media");
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to fetch files");
+      }
+
+      setMediaFiles(result.files);
+    } catch (error) {
+      setFilesError(
+        error instanceof Error ? error.message : "Failed to fetch files"
+      );
+    } finally {
+      setIsLoadingFiles(false);
+    }
   };
 
-  const createTestBlog = () => {
-    testAPI("/blogs", "POST", {
-      title: "Test Blog Post",
-      slug: `test-blog-${Date.now()}`,
-      content: "This is a test blog post content.",
-      excerpt: "A test excerpt",
-      status: "DRAFT",
-    });
+  const deleteSeedData = async () => {
+    try {
+      const response = await fetch("/api/media/seed-cleanup", {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        await fetchMediaFiles();
+        alert("Seed data deleted successfully!");
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch (error) {
+      alert("Failed to delete seed data");
+    }
   };
+
+  useEffect(() => {
+    fetchMediaFiles();
+  }, []);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">API Test Page</h1>
+      <h1 className="text-3xl font-bold">API Testing</h1>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>User APIs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button
-              onClick={() => testAPI("/users")}
-              disabled={loading}
-              className="w-full"
-            >
-              List Users
-            </Button>
-            <Button
-              onClick={createTestUser}
-              disabled={loading}
-              className="w-full"
-            >
-              Create Test User
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Media Upload Test */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Test Media Upload</CardTitle>
+          <CardDescription>Test the new media upload API</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Select a file to upload:
+            </label>
+            <Input
+              type="file"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              accept="image/*,audio/*,video/*,.pdf,.doc,.docx"
+            />
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Blog APIs</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button
-              onClick={() => testAPI("/blogs")}
-              disabled={loading}
-              className="w-full"
-            >
-              List Blogs
-            </Button>
-            <Button
-              onClick={createTestBlog}
-              disabled={loading}
-              className="w-full"
-            >
-              Create Test Blog
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          {isUploading && <div className="text-blue-600">Uploading...</div>}
 
-      {results && (
-        <Card>
-          <CardHeader>
-            <CardTitle>API Response</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-100 p-4 rounded">
-              <p>
-                <strong>Endpoint:</strong> {results.endpoint}
-              </p>
-              <p>
-                <strong>Method:</strong> {results.method}
-              </p>
-              {results.status && (
-                <p>
-                  <strong>Status:</strong> {results.status}
-                </p>
-              )}
-              {results.error && (
-                <p>
-                  <strong>Error:</strong> {results.error}
-                </p>
-              )}
-              <pre className="mt-2 text-sm overflow-auto">
-                {JSON.stringify(results.data, null, 2)}
+          {uploadError && (
+            <div className="text-red-600 p-4 border border-red-200 rounded-lg">
+              Error: {uploadError}
+            </div>
+          )}
+
+          {uploadResult && (
+            <div className="p-4 border border-green-200 rounded-lg bg-green-50">
+              <h3 className="font-medium text-green-800 mb-2">
+                Upload Successful!
+              </h3>
+              <pre className="text-sm text-green-700 overflow-auto">
+                {JSON.stringify(uploadResult, null, 2)}
               </pre>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Media List Test */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Test Media List API</CardTitle>
+          <CardDescription>
+            Test fetching media files from database
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button onClick={fetchMediaFiles} disabled={isLoadingFiles}>
+              {isLoadingFiles ? "Loading..." : "Refresh Files"}
+            </Button>
+            <Button onClick={deleteSeedData} variant="destructive">
+              Delete Seed Data
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {mediaFiles.length} files found
+            </span>
+          </div>
+
+          {filesError && (
+            <div className="text-red-600 p-4 border border-red-200 rounded-lg">
+              Error: {filesError}
+            </div>
+          )}
+
+          {mediaFiles.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium">Uploaded Files:</h4>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {mediaFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="p-3 border rounded-lg bg-muted/50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        {file.type}
+                      </span>
+                      <span className="font-medium">{file.originalName}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ({file.size})
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Uploaded: {new Date(file.uploadedAt).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

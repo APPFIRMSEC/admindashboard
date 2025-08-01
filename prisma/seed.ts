@@ -140,23 +140,7 @@ async function main() {
     },
   });
 
-  // Create sample media files
-  await prisma.mediaFile.upsert({
-    where: { id: "media-1" },
-    update: {},
-    create: {
-      id: "media-1",
-      name: "hero-image.jpg",
-      originalName: "hero-image.jpg",
-      type: "IMAGE",
-      url: "/images/hero-image.jpg",
-      size: "2.4 MB",
-      mimeType: "image/jpeg",
-      alt: "Hero section background image",
-      dimensions: "1920x1080",
-      uploaderId: adminUser.id,
-    },
-  });
+  // Create sample media files - REMOVED
 
   // Create dashboard items from your existing data.json
   const dashboardItems = [
