@@ -27,7 +27,6 @@ import {
   Twitter,
   Instagram,
   Linkedin,
-  RefreshCw,
 } from "lucide-react";
 
 export function SiteSettings() {
@@ -126,18 +125,6 @@ export function SiteSettings() {
     }
   };
 
-  const handleRebuild = async () => {
-    setIsLoading(true);
-
-    // Simulate rebuild trigger
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // In a real app, you'd trigger a site rebuild here
-    console.log("Triggering site rebuild...");
-
-    setIsLoading(false);
-  };
-
   // Show loading state while fetching settings
   if (isLoadingSettings) {
     return (
@@ -171,14 +158,6 @@ export function SiteSettings() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleRebuild}
-            disabled={isLoading}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Rebuild Site
-          </Button>
           <Button onClick={handleSave} disabled={isLoading}>
             <Save className="mr-2 h-4 w-4" />
             {isLoading ? "Saving..." : "Save Changes"}
