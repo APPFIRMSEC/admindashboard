@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +12,9 @@ import {
   FileText,
   X,
   Loader2,
+  Folder,
+  ChevronLeft,
+  Home,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -33,11 +30,18 @@ interface MediaFile {
   dimensions?: string;
   duration?: string;
   uploadedAt: string;
+  path?: string;
   uploader?: {
     id: string;
     name: string;
     email: string;
   };
+}
+
+interface FolderItem {
+  name: string;
+  path: string;
+  type: "folder";
 }
 
 interface MediaLibraryPickerProps {
@@ -48,6 +52,27 @@ interface MediaLibraryPickerProps {
   description?: string;
 }
 
+// Available folders based on file type
+const getAvailableFolders = (fileType: string): FolderItem[] => {
+  const folders = {
+    image: [
+      { name: "About", path: "/images/about", type: "folder" as const },
+      { name: "General", path: "/images/general", type: "folder" as const },
+    ],
+    audio: [
+      { name: "Podcasts", path: "/audio/podcasts", type: "folder" as const },
+      { name: "General", path: "/audio/general", type: "folder" as const },
+    ],
+    video: [
+      { name: "General", path: "/video/general", type: "folder" as const },
+    ],
+    document: [
+      { name: "General", path: "/documents/general", type: "folder" as const },
+    ],
+  };
+  return folders[fileType as keyof typeof folders] || [];
+};
+
 export function MediaLibraryPicker({
   fileType,
   onSelect,
@@ -56,17 +81,24 @@ export function MediaLibraryPicker({
   description = "Choose a file from your media library",
 }: MediaLibraryPickerProps) {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [folders, setFolders] = useState<FolderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPath, setCurrentPath] = useState("/");
+  const [breadcrumbs, setBreadcrumbs] = useState<
+    Array<{ name: string; path: string }>
+  >([{ name: "Root", path: "/" }]);
 
-  // Fetch media files from API
-  const fetchMediaFiles = async () => {
+  // Fetch media files and folders from API
+  const fetchMediaFiles = async (path: string = "/") => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/media?type=${fileType}`);
+      const response = await fetch(
+        `/api/media?type=${fileType.toUpperCase()}&path=${path}`
+      );
       const result = await response.json();
 
       if (!response.ok) {
@@ -74,6 +106,10 @@ export function MediaLibraryPicker({
       }
 
       setMediaFiles(result.files);
+
+      // Get available folders for current file type
+      const availableFolders = getAvailableFolders(fileType);
+      setFolders(availableFolders);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Failed to fetch files"
@@ -84,8 +120,29 @@ export function MediaLibraryPicker({
   };
 
   useEffect(() => {
-    fetchMediaFiles();
-  }, [fileType]);
+    fetchMediaFiles(currentPath);
+  }, [fileType, currentPath]);
+
+  // Update breadcrumbs when path changes
+  useEffect(() => {
+    if (currentPath === "/") {
+      setBreadcrumbs([{ name: "Root", path: "/" }]);
+    } else {
+      const pathParts = currentPath.split("/").filter(Boolean);
+      const newBreadcrumbs = [{ name: "Root", path: "/" }];
+
+      let currentPathBuilder = "";
+      pathParts.forEach((part) => {
+        currentPathBuilder += `/${part}`;
+        newBreadcrumbs.push({
+          name: part.charAt(0).toUpperCase() + part.slice(1),
+          path: currentPathBuilder,
+        });
+      });
+
+      setBreadcrumbs(newBreadcrumbs);
+    }
+  }, [currentPath]);
 
   const getFileIcon = (type: string) => {
     const icons = {
@@ -119,16 +176,39 @@ export function MediaLibraryPicker({
     );
   };
 
+  const handleFolderClick = (folder: FolderItem) => {
+    setCurrentPath(folder.path);
+  };
+
+  const handleBreadcrumbClick = (path: string) => {
+    setCurrentPath(path);
+  };
+
+  const handleBackClick = () => {
+    if (currentPath !== "/") {
+      const pathParts = currentPath.split("/").filter(Boolean);
+      pathParts.pop(); // Remove last part
+      const newPath = pathParts.length > 0 ? `/${pathParts.join("/")}` : "/";
+      setCurrentPath(newPath);
+    }
+  };
+
   const filteredFiles = mediaFiles.filter(
     (file) =>
       file.originalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (file.alt && file.alt.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const filteredFolders = folders.filter((folder) =>
+    folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleFileSelect = (file: MediaFile) => {
     onSelect(file);
     onClose();
   };
+
+  const allItems = [...filteredFolders, ...filteredFiles];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -149,12 +229,53 @@ export function MediaLibraryPicker({
           </div>
         )}
 
+        {/* Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 mb-4 p-2 bg-gray-50 rounded-lg">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentPath("/")}
+            className="p-1"
+          >
+            <Home className="h-4 w-4" />
+          </Button>
+
+          {currentPath !== "/" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBackClick}
+              className="p-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+
+          <div className="flex items-center gap-1">
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.path} className="flex items-center">
+                {index > 0 && (
+                  <span className="text-muted-foreground mx-1">/</span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleBreadcrumbClick(crumb.path)}
+                  className="text-sm"
+                >
+                  {crumb.name}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search files..."
+              placeholder="Search files and folders..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -162,7 +283,7 @@ export function MediaLibraryPicker({
           </div>
         </div>
 
-        {/* File Grid */}
+        {/* Files and Folders Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex items-center gap-2">
@@ -170,18 +291,49 @@ export function MediaLibraryPicker({
               <span>Loading files...</span>
             </div>
           </div>
-        ) : filteredFiles.length === 0 ? (
+        ) : allItems.length === 0 ? (
           <div className="text-center py-12">
             <File className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No files found</h3>
             <p className="text-muted-foreground">
               {searchTerm
                 ? "Try adjusting your search terms."
-                : `No ${fileType} files in your media library.`}
+                : `No ${fileType} files in this folder.`}
             </p>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {/* Folders */}
+            {filteredFolders.map((folder) => (
+              <Card
+                key={folder.path}
+                className="cursor-pointer transition-colors hover:bg-muted/50"
+                onClick={() => handleFolderClick(folder)}
+              >
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    {/* Folder Icon */}
+                    <div className="aspect-square rounded-lg bg-blue-50 flex items-center justify-center">
+                      <Folder className="h-8 w-8 text-blue-600" />
+                    </div>
+
+                    {/* Folder Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <p className="font-medium text-sm line-clamp-2">
+                          {folder.name}
+                        </p>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          folder
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Files */}
             {filteredFiles.map((file) => (
               <Card
                 key={file.id}

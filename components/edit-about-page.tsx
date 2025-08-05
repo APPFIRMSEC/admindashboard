@@ -92,9 +92,6 @@ export function EditAboutPage() {
   const [newTeamImageFile, setNewTeamImageFile] =
     useState<FileWithPreview | null>(null);
 
-  // Track images to delete on save
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
-
   // Fetch about data on component load
   useEffect(() => {
     const fetchAboutData = async () => {
@@ -215,16 +212,7 @@ export function EditAboutPage() {
   };
 
   const handleRemoveTeam = async (idx: number) => {
-    const memberToRemove = formData.team[idx];
-
     // Track the team member's image for deletion on save if it's a stored image
-    if (
-      memberToRemove?.imageUrl &&
-      memberToRemove.imageUrl !== "/placeholder.png" &&
-      !memberToRemove.imageUrl.startsWith("blob:")
-    ) {
-      setImagesToDelete((prev) => [...prev, memberToRemove.imageUrl]);
-    }
 
     // Cleanup local file preview
     const existingFile = teamImageFiles.get(idx);
@@ -291,11 +279,8 @@ export function EditAboutPage() {
       return;
     }
 
-    // If it's a stored image, track it for deletion on save and update UI immediately
+    // If it's a stored image, update UI immediately
     if (!isLocalPreview) {
-      // Add to images to delete on save
-      setImagesToDelete((prev) => [...prev, imageUrl]);
-
       // Update UI immediately
       if (type === "main") {
         setFormData((prev) => ({ ...prev, imageUrl: "" }));
@@ -320,17 +305,19 @@ export function EditAboutPage() {
     // Upload main image if selected
     if (mainImageFile) {
       const uploadFormData = new FormData();
-      uploadFormData.append("image", mainImageFile.file);
-      uploadFormData.append("oldImageUrl", formData.imageUrl || "");
+      uploadFormData.append("file", mainImageFile.file);
+      uploadFormData.append("category", "images");
+      uploadFormData.append("subcategory", "about");
+      uploadFormData.append("alt", "About page main image");
 
       uploadPromises.push(
-        fetch("/api/about/upload-image", {
+        fetch("/api/media/upload", {
           method: "POST",
           body: uploadFormData,
         }).then(async (response) => {
           if (!response.ok) throw new Error("Failed to upload main image");
           const data = await response.json();
-          return { type: "main", url: data.imageUrl };
+          return { type: "main", url: data.file.url };
         })
       );
     }
@@ -338,21 +325,20 @@ export function EditAboutPage() {
     // Upload team member images
     for (const [index, fileWithPreview] of teamImageFiles) {
       const uploadFormData = new FormData();
-      uploadFormData.append("image", fileWithPreview.file);
-      uploadFormData.append(
-        "oldImageUrl",
-        formData.team[index]?.imageUrl || ""
-      );
+      uploadFormData.append("file", fileWithPreview.file);
+      uploadFormData.append("category", "images");
+      uploadFormData.append("subcategory", "about");
+      uploadFormData.append("alt", `Team member ${index + 1} image`);
 
       uploadPromises.push(
-        fetch("/api/about/upload-image", {
+        fetch("/api/media/upload", {
           method: "POST",
           body: uploadFormData,
         }).then(async (response) => {
           if (!response.ok)
             throw new Error(`Failed to upload team image ${index}`);
           const data = await response.json();
-          return { type: "team", index, url: data.imageUrl };
+          return { type: "team", index, url: data.file.url };
         })
       );
     }
@@ -360,17 +346,19 @@ export function EditAboutPage() {
     // Upload new team member image if selected
     if (newTeamImageFile) {
       const uploadFormData = new FormData();
-      uploadFormData.append("image", newTeamImageFile.file);
-      uploadFormData.append("oldImageUrl", newTeam.imageUrl || "");
+      uploadFormData.append("file", newTeamImageFile.file);
+      uploadFormData.append("category", "images");
+      uploadFormData.append("subcategory", "about");
+      uploadFormData.append("alt", "New team member image");
 
       uploadPromises.push(
-        fetch("/api/about/upload-image", {
+        fetch("/api/media/upload", {
           method: "POST",
           body: uploadFormData,
         }).then(async (response) => {
           if (!response.ok) throw new Error("Failed to upload new team image");
           const data = await response.json();
-          return { type: "newTeam", url: data.imageUrl };
+          return { type: "newTeam", url: data.file.url };
         })
       );
     }
@@ -416,26 +404,8 @@ export function EditAboutPage() {
       });
 
       if (response.ok) {
-        // Delete tracked images from storage
-        if (imagesToDelete.length > 0) {
-          const deletePromises = imagesToDelete.map(async (imageUrl) => {
-            try {
-              const deleteResponse = await fetch("/api/about/delete-image", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl }),
-              });
-              if (!deleteResponse.ok) {
-                console.error(`Failed to delete image: ${imageUrl}`);
-              }
-            } catch (error) {
-              console.error(`Error deleting image ${imageUrl}:`, error);
-            }
-          });
-
-          await Promise.all(deletePromises);
-          setImagesToDelete([]); // Clear the tracked images
-        }
+        // Media Library files should only be deleted from Media Library
+        // Don't delete them when content is deleted - they are shared resources
 
         // Clear all file states after successful save
         if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);

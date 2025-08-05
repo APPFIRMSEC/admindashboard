@@ -8,26 +8,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useMediaLibrary, FolderItem } from "@/hooks/use-media-library";
+import { Button } from "@/components/ui/button";
+import { useMediaLibrary } from "@/hooks/use-media-library";
 import { FolderSidebar } from "./media-library/FolderSidebar";
 import { Breadcrumb } from "./media-library/Breadcrumb";
-import { UploadSection } from "./media-library/UploadSection";
 import { FileGrid } from "./media-library/FileGrid";
 import { DeleteDialog } from "./media-library/DeleteDialog";
 import { BulkActions } from "./media-library/BulkActions";
+import { UploadModal } from "./media-library/UploadModal";
+import { useState } from "react";
+import { Upload } from "lucide-react";
 
 export function MediaLibrary() {
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
   const {
     mediaFiles,
     isLoading,
-    error,
     searchTerm,
     setSearchTerm,
     selectedFiles,
     setSelectedFiles,
-    isUploading,
-    pendingFiles,
-    setPendingFiles,
     isDeleting,
     deleteConfirm,
     setDeleteConfirm,
@@ -36,29 +37,27 @@ export function MediaLibrary() {
     currentPath,
     folderTree,
     navigateToFolder,
-    handleUploadFiles,
     handleDeleteFile,
     handleBulkDelete,
     handleFileSelectFromGrid,
-    handleFileUploadChange,
     fetchMediaFiles,
   } = useMediaLibrary();
 
-  const getCurrentSubFolders = (): FolderItem[] => {
+  const getCurrentSubFolders = () => {
     if (currentPath === "/") return folderTree;
     const pathParts = currentPath.split("/").filter(Boolean);
-    let currentLevel: FolderItem[] | undefined = folderTree;
+    let currentLevel = folderTree;
     for (const part of pathParts) {
       const folder = currentLevel?.find(
         (f) => f.name.toLowerCase() === part.toLowerCase()
       );
-      if (folder) {
+      if (folder && folder.children) {
         currentLevel = folder.children;
       } else {
         return [];
       }
     }
-    return currentLevel || [];
+    return currentLevel ?? [];
   };
 
   return (
@@ -71,11 +70,6 @@ export function MediaLibrary() {
           </p>
         </div>
       </div>
-
-      <Breadcrumb
-        currentPath={currentPath}
-        navigateToFolder={navigateToFolder}
-      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
@@ -93,15 +87,29 @@ export function MediaLibrary() {
           </Card>
         </div>
 
-        <div className="lg:col-span-3 space-y-6">
-          <UploadSection
-            pendingFiles={pendingFiles}
-            isUploading={isUploading}
-            handleFileUploadChange={handleFileUploadChange}
-            handleUploadFiles={handleUploadFiles}
-            setPendingFiles={setPendingFiles}
-            currentPath={currentPath}
-          />
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex items-center gap-3">
+            <Breadcrumb
+              currentPath={currentPath}
+              navigateToFolder={navigateToFolder}
+            />
+            <div className="flex items-center gap-2 ml-auto">
+              <Input
+                placeholder="Search in current folder..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+              <Button
+                size="sm"
+                onClick={() => setShowUploadModal(true)}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload
+              </Button>
+            </div>
+          </div>
 
           <Card>
             <CardHeader>
@@ -109,12 +117,6 @@ export function MediaLibrary() {
               <CardDescription>
                 Browse and manage your media files in the current folder.
               </CardDescription>
-              <Input
-                placeholder="Search in current folder..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
             </CardHeader>
             <CardContent>
               <FileGrid
@@ -147,6 +149,16 @@ export function MediaLibrary() {
         handleDeleteFile={handleDeleteFile}
         fileToDelete={fileToDelete}
         setDeleteConfirm={setDeleteConfirm}
+      />
+
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        currentPath={currentPath}
+        onUploadComplete={() => {
+          setShowUploadModal(false);
+          fetchMediaFiles();
+        }}
       />
     </div>
   );
