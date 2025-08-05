@@ -56,7 +56,7 @@ export function MoveDialog({ isOpen, onClose, file, onMove }: MoveDialogProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <CardTitle>Move "{file.originalName}"</CardTitle>
+          <CardTitle>Move &quot;{file.originalName}&quot;</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">

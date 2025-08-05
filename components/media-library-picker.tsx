@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,37 +91,40 @@ export function MediaLibraryPicker({
   >([{ name: "Root", path: "/" }]);
 
   // Fetch media files and folders from API
-  const fetchMediaFiles = async (path: string = "/") => {
-    setIsLoading(true);
-    setError(null);
+  const fetchMediaFiles = useCallback(
+    async (path: string = "/") => {
+      setIsLoading(true);
+      setError(null);
 
-    try {
-      const response = await fetch(
-        `/api/media?type=${fileType.toUpperCase()}&path=${path}`
-      );
-      const result = await response.json();
+      try {
+        const response = await fetch(
+          `/api/media?type=${fileType.toUpperCase()}&path=${path}`
+        );
+        const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to fetch files");
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to fetch files");
+        }
+
+        setMediaFiles(result.files);
+
+        // Get available folders for current file type
+        const availableFolders = getAvailableFolders(fileType);
+        setFolders(availableFolders);
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch files"
+        );
+      } finally {
+        setIsLoading(false);
       }
-
-      setMediaFiles(result.files);
-
-      // Get available folders for current file type
-      const availableFolders = getAvailableFolders(fileType);
-      setFolders(availableFolders);
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to fetch files"
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [fileType]
+  );
 
   useEffect(() => {
     fetchMediaFiles(currentPath);
-  }, [fileType, currentPath]);
+  }, [fileType, currentPath, fetchMediaFiles]);
 
   // Update breadcrumbs when path changes
   useEffect(() => {

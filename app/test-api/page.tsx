@@ -12,12 +12,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function TestApiPage() {
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<{
+    success: boolean;
+    file: {
+      id: string;
+      name: string;
+      originalName: string;
+      type: string;
+      url: string;
+      size: string;
+      mimeType: string;
+      alt: string;
+      uploadedAt: string;
+    };
+  } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Media list test
-  const [mediaFiles, setMediaFiles] = useState<any[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<
+    Array<{
+      id: string;
+      name: string;
+      originalName: string;
+      type: string;
+      url: string;
+      size: string;
+      mimeType: string;
+      alt?: string;
+      uploadedAt: string;
+    }>
+  >([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [filesError, setFilesError] = useState<string | null>(null);
 
@@ -94,7 +119,7 @@ export default function TestApiPage() {
         const error = await response.json();
         alert(`Error: ${error.error}`);
       }
-    } catch (error) {
+    } catch {
       alert("Failed to delete seed data");
     }
   };

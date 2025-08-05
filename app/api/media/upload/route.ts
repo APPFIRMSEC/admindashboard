@@ -61,7 +61,6 @@ export async function POST(req: NextRequest) {
 
     // Generate unique filename
     const timestamp = Date.now();
-    const fileExtension = file.name.split(".").pop();
     const fileName = `${timestamp}-${file.name}`;
 
     // Determine storage path based on file type
@@ -113,7 +112,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: fileName,
         originalName: file.name,
-        type: mediaType as any,
+        type: mediaType as "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT",
         url: publicUrlData.publicUrl,
         size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         mimeType: file.type,

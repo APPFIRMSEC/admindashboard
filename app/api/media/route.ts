@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma, MediaType } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,11 +19,11 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.MediaFileWhereInput = {};
 
     // Filter by file type
     if (type) {
-      where.type = type.toUpperCase();
+      where.type = type.toUpperCase() as MediaType;
     }
 
     // Filter by search term
