@@ -1,255 +1,165 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  Search, 
-  Download, 
-  Copy, 
-  Trash2, 
-  Image as ImageIcon,
-  File,
-  Calendar,
-  FileText
-} from "lucide-react";
-import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { useMediaLibrary } from "@/hooks/use-media-library";
+import { FolderSidebar } from "./media-library/FolderSidebar";
+import { Breadcrumb } from "./media-library/Breadcrumb";
+import { FileGrid } from "./media-library/FileGrid";
+import { DeleteDialog } from "./media-library/DeleteDialog";
+import { BulkActions } from "./media-library/BulkActions";
+import { UploadModal } from "./media-library/UploadModal";
+import { useState } from "react";
+import { Upload } from "lucide-react";
 
 export function MediaLibrary() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Mock data - in a real app, this would come from your API
-  const mediaFiles = [
-    {
-      id: 1,
-      name: "hero-image.jpg",
-      type: "image",
-      url: "/images/hero-image.jpg",
-      size: "2.4 MB",
-      uploadedAt: "2024-01-15",
-      dimensions: "1920x1080",
-      alt: "Hero section background image"
-    },
-    {
-      id: 2,
-      name: "podcast-episode-23.mp3",
-      type: "audio",
-      url: "/podcasts/episode-23.mp3",
-      size: "32.5 MB",
-      uploadedAt: "2024-01-14",
-      duration: "45:30",
-      alt: "Podcast episode 23 audio file"
-    },
-    {
-      id: 3,
-      name: "about-team.jpg",
-      type: "image",
-      url: "/images/about-team.jpg",
-      size: "1.8 MB",
-      uploadedAt: "2024-01-13",
-      dimensions: "1200x800",
-      alt: "Team photo for about page"
-    },
-    {
-      id: 4,
-      name: "blog-post-template.pdf",
-      type: "document",
-      url: "/documents/blog-post-template.pdf",
-      size: "156 KB",
-      uploadedAt: "2024-01-12",
-      pages: "3",
-      alt: "Blog post writing template"
-    },
-    {
-      id: 5,
-      name: "logo-white.png",
-      type: "image",
-      url: "/images/logo-white.png",
-      size: "45 KB",
-      uploadedAt: "2024-01-11",
-      dimensions: "200x60",
-      alt: "White version of company logo"
-    },
-    {
-      id: 6,
-      name: "podcast-episode-22.mp3",
-      type: "audio",
-      url: "/podcasts/episode-22.mp3",
-      size: "28.1 MB",
-      uploadedAt: "2024-01-10",
-      duration: "38:15",
-      alt: "Podcast episode 22 audio file"
+  const {
+    mediaFiles,
+    isLoading,
+    searchTerm,
+    setSearchTerm,
+    selectedFiles,
+    setSelectedFiles,
+    isDeleting,
+    deleteConfirm,
+    setDeleteConfirm,
+    fileToDelete,
+    setFileToDelete,
+    currentPath,
+    folderTree,
+    navigateToFolder,
+    handleDeleteFile,
+    handleBulkDelete,
+    handleFileSelectFromGrid,
+    fetchMediaFiles,
+  } = useMediaLibrary();
+
+  const getCurrentSubFolders = () => {
+    if (currentPath === "/") return folderTree;
+    const pathParts = currentPath.split("/").filter(Boolean);
+    let currentLevel = folderTree;
+    for (const part of pathParts) {
+      const folder = currentLevel?.find(
+        (f) => f.name.toLowerCase() === part.toLowerCase()
+      );
+      if (folder && folder.children) {
+        currentLevel = folder.children;
+      } else {
+        return [];
+      }
     }
-  ];
-
-  const getFileIcon = (type: string) => {
-    const icons = {
-      image: ImageIcon,
-      audio: File,
-      document: FileText
-    };
-    const Icon = icons[type as keyof typeof icons];
-    return <Icon className="h-8 w-8" />;
-  };
-
-  const getFileTypeBadge = (type: string) => {
-    const variants = {
-      image: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-      audio: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-      document: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-    };
-    return <Badge className={variants[type as keyof typeof variants]}>{type}</Badge>;
-  };
-
-  const filteredFiles = mediaFiles.filter(file => 
-    file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    file.alt.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleFileSelect = (fileId: string) => {
-    setSelectedFiles(prev => 
-      prev.includes(fileId) 
-        ? prev.filter(id => id !== fileId)
-        : [...prev, fileId]
-    );
-  };
-
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url);
-    // In a real app, you'd show a toast notification
+    return currentLevel ?? [];
   };
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Media Library</h1>
           <p className="text-muted-foreground">
-            Manage your uploaded images, audio files, and documents
+            A File-Explorer like interface to manage all your media assets
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Upload Files
-        </Button>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Search Files</CardTitle>
-          <CardDescription>Find specific files in your media library</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search files by name or description..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Folders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FolderSidebar
+                folderTree={folderTree}
+                currentPath={currentPath}
+                navigateToFolder={navigateToFolder}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex items-center gap-3">
+            <Breadcrumb
+              currentPath={currentPath}
+              navigateToFolder={navigateToFolder}
             />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Media Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Files ({filteredFiles.length})</CardTitle>
-          <CardDescription>
-            Browse and manage your uploaded media files
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredFiles.map((file) => (
-              <Card 
-                key={file.id} 
-                className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                  selectedFiles.includes(file.id.toString()) ? 'ring-2 ring-primary' : ''
-                }`}
-                onClick={() => handleFileSelect(file.id.toString())}
+            <div className="flex items-center gap-2 ml-auto">
+              <Input
+                placeholder="Search in current folder..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+              <Button
+                size="sm"
+                onClick={() => setShowUploadModal(true)}
+                className="flex items-center gap-2"
               >
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {/* File Preview */}
-                    <div className="aspect-square rounded-lg bg-muted flex items-center justify-center">
-                      {file.type === "image" ? (
-                        <Image
-                          src={file.url}
-                          alt={file.alt}
-                          width={400}
-                          height={400}
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="text-muted-foreground">
-                          {getFileIcon(file.type)}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* File Info */}
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between">
-                        <p className="font-medium text-sm line-clamp-2">{file.name}</p>
-                        {getFileTypeBadge(file.type)}
-                      </div>
-                      
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(file.uploadedAt).toLocaleDateString()}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <File className="h-3 w-3" />
-                          {file.size}
-                        </div>
-                        {file.dimensions && (
-                          <div>{file.dimensions}</div>
-                        )}
-                        {file.duration && (
-                          <div>{file.duration}</div>
-                        )}
-                        {file.pages && (
-                          <div>{file.pages} pages</div>
-                        )}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 pt-2">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyToClipboard(file.url);
-                          }}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                <Upload className="h-4 w-4" />
+                Upload
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Files</CardTitle>
+              <CardDescription>
+                Browse and manage your media files in the current folder.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FileGrid
+                files={mediaFiles}
+                folders={getCurrentSubFolders()}
+                isLoading={isLoading}
+                selectedFiles={selectedFiles}
+                handleFileSelectFromGrid={handleFileSelectFromGrid}
+                navigateToFolder={navigateToFolder}
+                setFileToDelete={setFileToDelete}
+                setDeleteConfirm={setDeleteConfirm}
+              />
+            </CardContent>
+          </Card>
+
+          <BulkActions
+            selectedFilesCount={selectedFiles.length}
+            isDeleting={isDeleting}
+            setDeleteConfirm={setDeleteConfirm}
+            clearSelection={() => setSelectedFiles([])}
+          />
+        </div>
+      </div>
+
+      <DeleteDialog
+        deleteConfirm={deleteConfirm}
+        isDeleting={isDeleting}
+        selectedFilesCount={selectedFiles.length}
+        handleBulkDelete={handleBulkDelete}
+        handleDeleteFile={handleDeleteFile}
+        fileToDelete={fileToDelete}
+        setDeleteConfirm={setDeleteConfirm}
+      />
+
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        currentPath={currentPath}
+        onUploadComplete={() => {
+          setShowUploadModal(false);
+          fetchMediaFiles();
+        }}
+      />
     </div>
   );
-} 
+}

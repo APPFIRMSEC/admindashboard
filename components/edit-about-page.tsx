@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
-import { Save, UserPlus, Trash2 } from "lucide-react";
+import { Save, UserPlus, Trash2, FolderOpen } from "lucide-react";
 import { useSiteContext } from "@/contexts/site-context";
+import { MediaLibraryPicker } from "./media-library-picker";
 
 interface TeamMember {
   name: string;
@@ -32,6 +33,25 @@ interface AboutData {
 interface FileWithPreview {
   file: File;
   preview: string;
+}
+
+interface MediaFile {
+  id: string;
+  name: string;
+  originalName: string;
+  type: string;
+  url: string;
+  size: string;
+  mimeType: string;
+  alt?: string;
+  dimensions?: string;
+  duration?: string;
+  uploadedAt: string;
+  uploader?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export function EditAboutPage() {
@@ -55,6 +75,13 @@ export function EditAboutPage() {
     imageUrl: "",
   });
 
+  // Media Library picker states
+  const [showMainImagePicker, setShowMainImagePicker] = useState(false);
+  const [showTeamImagePicker, setShowTeamImagePicker] = useState<number | null>(
+    null
+  );
+  const [showNewTeamImagePicker, setShowNewTeamImagePicker] = useState(false);
+
   // Store files for upload on save
   const [mainImageFile, setMainImageFile] = useState<FileWithPreview | null>(
     null
@@ -64,9 +91,6 @@ export function EditAboutPage() {
   >(new Map());
   const [newTeamImageFile, setNewTeamImageFile] =
     useState<FileWithPreview | null>(null);
-
-  // Track images to delete on save
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
   // Fetch about data on component load
   useEffect(() => {
@@ -100,6 +124,26 @@ export function EditAboutPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Handle Media Library file selection for main image
+  const handleMainImageSelect = (file: MediaFile) => {
+    setFormData((prev) => ({ ...prev, imageUrl: file.url }));
+  };
+
+  // Handle Media Library file selection for team member image
+  const handleTeamImageSelect = (file: MediaFile, idx: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      team: prev.team.map((member, i) =>
+        i === idx ? { ...member, imageUrl: file.url } : member
+      ),
+    }));
+  };
+
+  // Handle Media Library file selection for new team member image
+  const handleNewTeamImageSelect = (file: MediaFile) => {
+    setNewTeam((prev) => ({ ...prev, imageUrl: file.url }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,16 +212,7 @@ export function EditAboutPage() {
   };
 
   const handleRemoveTeam = async (idx: number) => {
-    const memberToRemove = formData.team[idx];
-
     // Track the team member's image for deletion on save if it's a stored image
-    if (
-      memberToRemove?.imageUrl &&
-      memberToRemove.imageUrl !== "/placeholder.png" &&
-      !memberToRemove.imageUrl.startsWith("blob:")
-    ) {
-      setImagesToDelete((prev) => [...prev, memberToRemove.imageUrl]);
-    }
 
     // Cleanup local file preview
     const existingFile = teamImageFiles.get(idx);
@@ -244,11 +279,8 @@ export function EditAboutPage() {
       return;
     }
 
-    // If it's a stored image, track it for deletion on save and update UI immediately
+    // If it's a stored image, update UI immediately
     if (!isLocalPreview) {
-      // Add to images to delete on save
-      setImagesToDelete((prev) => [...prev, imageUrl]);
-
       // Update UI immediately
       if (type === "main") {
         setFormData((prev) => ({ ...prev, imageUrl: "" }));
@@ -273,17 +305,19 @@ export function EditAboutPage() {
     // Upload main image if selected
     if (mainImageFile) {
       const uploadFormData = new FormData();
-      uploadFormData.append("image", mainImageFile.file);
-      uploadFormData.append("oldImageUrl", formData.imageUrl || "");
+      uploadFormData.append("file", mainImageFile.file);
+      uploadFormData.append("category", "images");
+      uploadFormData.append("subcategory", "about");
+      uploadFormData.append("alt", "About page main image");
 
       uploadPromises.push(
-        fetch("/api/about/upload-image", {
+        fetch("/api/media/upload", {
           method: "POST",
           body: uploadFormData,
         }).then(async (response) => {
           if (!response.ok) throw new Error("Failed to upload main image");
           const data = await response.json();
-          return { type: "main", url: data.imageUrl };
+          return { type: "main", url: data.file.url };
         })
       );
     }
@@ -291,21 +325,20 @@ export function EditAboutPage() {
     // Upload team member images
     for (const [index, fileWithPreview] of teamImageFiles) {
       const uploadFormData = new FormData();
-      uploadFormData.append("image", fileWithPreview.file);
-      uploadFormData.append(
-        "oldImageUrl",
-        formData.team[index]?.imageUrl || ""
-      );
+      uploadFormData.append("file", fileWithPreview.file);
+      uploadFormData.append("category", "images");
+      uploadFormData.append("subcategory", "about");
+      uploadFormData.append("alt", `Team member ${index + 1} image`);
 
       uploadPromises.push(
-        fetch("/api/about/upload-image", {
+        fetch("/api/media/upload", {
           method: "POST",
           body: uploadFormData,
         }).then(async (response) => {
           if (!response.ok)
             throw new Error(`Failed to upload team image ${index}`);
           const data = await response.json();
-          return { type: "team", index, url: data.imageUrl };
+          return { type: "team", index, url: data.file.url };
         })
       );
     }
@@ -313,17 +346,19 @@ export function EditAboutPage() {
     // Upload new team member image if selected
     if (newTeamImageFile) {
       const uploadFormData = new FormData();
-      uploadFormData.append("image", newTeamImageFile.file);
-      uploadFormData.append("oldImageUrl", newTeam.imageUrl || "");
+      uploadFormData.append("file", newTeamImageFile.file);
+      uploadFormData.append("category", "images");
+      uploadFormData.append("subcategory", "about");
+      uploadFormData.append("alt", "New team member image");
 
       uploadPromises.push(
-        fetch("/api/about/upload-image", {
+        fetch("/api/media/upload", {
           method: "POST",
           body: uploadFormData,
         }).then(async (response) => {
           if (!response.ok) throw new Error("Failed to upload new team image");
           const data = await response.json();
-          return { type: "newTeam", url: data.imageUrl };
+          return { type: "newTeam", url: data.file.url };
         })
       );
     }
@@ -369,26 +404,8 @@ export function EditAboutPage() {
       });
 
       if (response.ok) {
-        // Delete tracked images from storage
-        if (imagesToDelete.length > 0) {
-          const deletePromises = imagesToDelete.map(async (imageUrl) => {
-            try {
-              const deleteResponse = await fetch("/api/about/delete-image", {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl }),
-              });
-              if (!deleteResponse.ok) {
-                console.error(`Failed to delete image: ${imageUrl}`);
-              }
-            } catch (error) {
-              console.error(`Error deleting image ${imageUrl}:`, error);
-            }
-          });
-
-          await Promise.all(deletePromises);
-          setImagesToDelete([]); // Clear the tracked images
-        }
+        // Media Library files should only be deleted from Media Library
+        // Don't delete them when content is deleted - they are shared resources
 
         // Clear all file states after successful save
         if (mainImageFile) URL.revokeObjectURL(mainImageFile.preview);
@@ -504,32 +521,45 @@ export function EditAboutPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Input
-              id="about-image"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-            />
-            {formData.imageUrl && (
-              <div className="flex items-center gap-2 mt-2">
-                <Image
-                  src={formData.imageUrl || "/placeholder.png"}
-                  alt="About"
-                  width={256}
-                  height={128}
-                  className="rounded w-full max-w-xs h-32 object-cover border"
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  id="about-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
                 />
                 <Button
                   type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => handleDeleteImage(formData.imageUrl, "main")}
-                  className="h-8 w-8 p-0"
+                  variant="outline"
+                  onClick={() => setShowMainImagePicker(true)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  Select from Media Library
                 </Button>
               </div>
-            )}
+              {formData.imageUrl && (
+                <div className="flex items-center gap-2">
+                  <Image
+                    src={formData.imageUrl || "/placeholder.png"}
+                    alt="About"
+                    width={256}
+                    height={128}
+                    className="rounded w-full max-w-xs h-32 object-cover border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDeleteImage(formData.imageUrl, "main")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
         <Card className="w-full lg:col-span-2">
@@ -567,12 +597,24 @@ export function EditAboutPage() {
                         </Button>
                       )}
                   </div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleTeamImageChange(e, idx)}
-                    className="w-32"
-                  />
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleTeamImageChange(e, idx)}
+                      className="w-32"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowTeamImagePicker(idx)}
+                      className="w-32"
+                    >
+                      <FolderOpen className="mr-1 h-3 w-3" />
+                      Media Library
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex-1 w-full grid gap-2">
                   <Input
@@ -611,12 +653,24 @@ export function EditAboutPage() {
                   height={64}
                   className="rounded-full object-cover border"
                 />
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleNewTeamImageChange}
-                  className="w-32"
-                />
+                <div className="flex flex-col gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleNewTeamImageChange}
+                    className="w-32"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewTeamImagePicker(true)}
+                    className="w-32"
+                  >
+                    <FolderOpen className="mr-1 h-3 w-3" />
+                    Media Library
+                  </Button>
+                </div>
               </div>
               <div className="flex-1 w-full grid gap-2">
                 <Input
@@ -652,6 +706,37 @@ export function EditAboutPage() {
           </Button>
         </div>
       </form>
+
+      {/* Media Library Pickers */}
+      {showMainImagePicker && (
+        <MediaLibraryPicker
+          fileType="image"
+          onSelect={handleMainImageSelect}
+          onClose={() => setShowMainImagePicker(false)}
+          title="Select Main Image"
+          description="Choose an image from your media library"
+        />
+      )}
+
+      {showTeamImagePicker !== null && (
+        <MediaLibraryPicker
+          fileType="image"
+          onSelect={(file) => handleTeamImageSelect(file, showTeamImagePicker)}
+          onClose={() => setShowTeamImagePicker(null)}
+          title="Select Team Member Image"
+          description="Choose an image from your media library"
+        />
+      )}
+
+      {showNewTeamImagePicker && (
+        <MediaLibraryPicker
+          fileType="image"
+          onSelect={handleNewTeamImageSelect}
+          onClose={() => setShowNewTeamImagePicker(false)}
+          title="Select New Team Member Image"
+          description="Choose an image from your media library"
+        />
+      )}
     </div>
   );
 }

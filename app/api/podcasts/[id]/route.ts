@@ -88,13 +88,16 @@ export async function DELETE(
     if (!podcast) {
       return NextResponse.json({ error: "Podcast not found" }, { status: 404 });
     }
-    // Delete audio file from Supabase Storage if it exists
+    // Delete audio file from Supabase Storage if it exists (only old system)
     if (podcast.audioUrl) {
-      // Extract the storage key from the audioUrl
-      const match = podcast.audioUrl.match(/podcasts-audio\/(.+)$/);
-      if (match && match[1]) {
-        await supabase.storage.from("podcasts-audio").remove([match[1]]);
+      // Only delete from old system (podcasts-audio bucket)
+      const oldMatch = podcast.audioUrl.match(/podcasts-audio\/(.+)$/);
+      if (oldMatch && oldMatch[1]) {
+        await supabase.storage.from("podcasts-audio").remove([oldMatch[1]]);
       }
+
+      // Don't delete from Media Library - files are shared resources
+      // Media Library files should only be deleted when explicitly deleted from Media Library
     }
     await db.podcast.delete({ where: { id } });
     return NextResponse.json({ message: "Podcast deleted successfully" });
