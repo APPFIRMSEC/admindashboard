@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { SiteSetting } from "@prisma/client";
 
 // GET /api/site-settings - Fetch all settings for current site
 export async function GET(req: NextRequest) {
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const settings = data.settings;
-    const upsertPromises: Promise<any>[] = [];
+    const upsertPromises: Promise<SiteSetting>[] = [];
 
     // Create upsert operations for each setting
     Object.entries(settings).forEach(([key, value]) => {
